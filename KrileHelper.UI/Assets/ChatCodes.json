@@ -1,0 +1,206 @@
+[
+  {
+    "ChatCode": "0039",
+    "MsgType": 1,
+    "Name": "System",
+    "Color": "#FFCCCCCC"
+  },
+  {
+    "ChatCode": "0003",
+    "MsgType": 3,
+    "Name": "ServerInfo",
+    "Color": "#FFCCCCCC"
+  },
+  {
+    "ChatCode": "0038",
+    "MsgType": 3,
+    "Name": "Echo",
+    "Color": "#FF74C8CC"
+  },
+  {
+    "ChatCode": "003C",
+    "MsgType": 3,
+    "Name": "Error",
+    "Color": "#FFFF4A4A"
+  },
+  {
+    "ChatCode": "003D",
+    "MsgType": 1,
+    "Name": "NPCD",
+    "Color": "#FFABD647"
+  },
+  {
+    "ChatCode": "0044",
+    "MsgType": 1,
+    "Name": "NPCA",
+    "Color": "#FFABD647"
+  },
+  {
+    "ChatCode": "2AB9",
+    "MsgType": 1,
+    "Name": "BossQuotes",
+    "Color": "#FFABD647"
+  },
+  {
+    "ChatCode": "0048",
+    "MsgType": 3,
+    "Name": "Recruitment",
+    "Color": "#FFCCCCCC"
+  },
+  {
+    "ChatCode": "000A",
+    "MsgType": 3,
+    "Name": "Say",
+    "Color": "#FFF7F7F7"
+  },
+  {
+    "ChatCode": "000B",
+    "MsgType": 3,
+    "Name": "Shout",
+    "Color": "#FFFFA666"
+  },
+  {
+    "ChatCode": "000E",
+    "MsgType": 3,
+    "Name": "Party",
+    "Color": "#FF66E5FF"
+  },
+  {
+    "ChatCode": "000D",
+    "MsgType": 3,
+    "Name": "Tell",
+    "Color": "#FFFFB8DE"
+  },
+  {
+    "ChatCode": "0018",
+    "MsgType": 3,
+    "Name": "FreeCompany",
+    "Color": "#FFABDBE5"
+  },
+  {
+    "ChatCode": "001E",
+    "MsgType": 3,
+    "Name": "Yell",
+    "Color": "#FFFFFF00"
+  },
+  {
+    "ChatCode": "000F",
+    "MsgType": 3,
+    "Name": "Alliance",
+    "Color": "#FFFF7F00"
+  },
+  {
+    "ChatCode": "0010",
+    "MsgType": 3,
+    "Name": "LinkShell1",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0011",
+    "MsgType": 3,
+    "Name": "LinkShell2",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0012",
+    "MsgType": 3,
+    "Name": "LinkShell3",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0013",
+    "MsgType": 3,
+    "Name": "LinkShell4",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0014",
+    "MsgType": 3,
+    "Name": "LinkShell5",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0015",
+    "MsgType": 3,
+    "Name": "LinkShell6",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0016",
+    "MsgType": 3,
+    "Name": "LinkShell7",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0017",
+    "MsgType": 3,
+    "Name": "LinkShell8",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0025",
+    "MsgType": 3,
+    "Name": "CWLS1",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0065",
+    "MsgType": 3,
+    "Name": "CWLS2",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0066",
+    "MsgType": 3,
+    "Name": "CWLS3",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0067",
+    "MsgType": 3,
+    "Name": "CWLS4",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0068",
+    "MsgType": 3,
+    "Name": "CWLS5",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "0069",
+    "MsgType": 3,
+    "Name": "CWLS6",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "006A",
+    "MsgType": 3,
+    "Name": "CWLS7",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "006B",
+    "MsgType": 3,
+    "Name": "CWLS8",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "001B",
+    "MsgType": 3,
+    "Name": "NoviceNetwork",
+    "Color": "#FFD4FF7D"
+  },
+  {
+    "ChatCode": "001D",
+    "MsgType": 3,
+    "Name": "Emotes",
+    "Color": "#FFCCCCCC"
+  },
+  {
+    "ChatCode": "001C",
+    "MsgType": 3,
+    "Name": "CustomEmotes",
+    "Color": "#FFCCCCCC"
+  }
+]

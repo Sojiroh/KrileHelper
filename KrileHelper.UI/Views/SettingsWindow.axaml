@@ -1,0 +1,119 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:KrileHelper.UI.ViewModels"
+        xmlns:svc="clr-namespace:KrileHelper.UI.Services"
+        x:Class="KrileHelper.UI.Views.SettingsWindow"
+        x:DataType="vm:SettingsWindowViewModel"
+        Title="Krile Settings"
+        Width="480" Height="600"
+        WindowStartupLocation="CenterOwner"
+        Background="#FF1A1A1F">
+
+    <ScrollViewer Padding="16">
+        <StackPanel Spacing="16">
+
+            <!-- Translation -->
+            <Border Background="#FF26262C" CornerRadius="6" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Translation" Foreground="#E5E5E5" FontWeight="SemiBold" FontSize="14"/>
+
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Engine:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,0,8,3"/>
+                        <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,3"
+                                  ItemsSource="{Binding EngineOptions}"
+                                  SelectedItem="{Binding SelectedEngine}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="svc:EngineOption">
+                                    <TextBlock Text="{Binding Display}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="DeepL key:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,3,8,3"
+                                   IsVisible="{Binding IsDeepL}"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Margin="0,3,0,3"
+                                 Text="{Binding DeepLApiKey}"
+                                 PasswordChar="•"
+                                 Watermark="Paste your DeepL API key here (ends with :fx for Free tier)"
+                                 IsVisible="{Binding IsDeepL}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Source:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,3,8,3"/>
+                        <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,3,0,3"
+                                  ItemsSource="{Binding SourceOptions}"
+                                  SelectedItem="{Binding SelectedSource}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="svc:LanguageOption">
+                                    <TextBlock Text="{Binding Display}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Target:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,3,8,0"/>
+                        <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,3,0,0"
+                                  ItemsSource="{Binding TargetOptions}"
+                                  SelectedItem="{Binding SelectedTarget}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="svc:LanguageOption">
+                                    <TextBlock Text="{Binding Display}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Window -->
+            <Border Background="#FF26262C" CornerRadius="6" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Window" Foreground="#E5E5E5" FontWeight="SemiBold" FontSize="14"/>
+
+                    <CheckBox Content="Always on top" IsChecked="{Binding Topmost}" Foreground="#CCC"/>
+
+                    <StackPanel Spacing="2">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Background opacity" Foreground="#AAA"/>
+                            <TextBlock Grid.Column="1" Text="{Binding BackgroundOpacity, StringFormat='{}{0:P0}'}" Foreground="#888"/>
+                        </Grid>
+                        <Slider Minimum="0.10" Maximum="1.00" Value="{Binding BackgroundOpacity}" TickFrequency="0.05"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Channels -->
+            <Border Background="#FF26262C" CornerRadius="6" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Channels" Foreground="#E5E5E5" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="Toggle Show to hide a channel entirely. Toggle Translate to suppress translation but still show it."
+                               Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
+
+                    <Grid ColumnDefinitions="*,80,80" Margin="0,4,0,0">
+                        <TextBlock Grid.Column="0" Text="Channel" Foreground="#888" FontSize="11"/>
+                        <TextBlock Grid.Column="1" Text="Show" Foreground="#888" FontSize="11" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="Translate" Foreground="#888" FontSize="11" HorizontalAlignment="Center"/>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Channels}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:ChannelSettingViewModel">
+                                <Grid ColumnDefinitions="*,80,80" Margin="0,2">
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <Ellipse Width="10" Height="10" Fill="{Binding Color}"/>
+                                        <TextBlock Text="{Binding Name}" Foreground="#DDD"/>
+                                        <TextBlock Text="{Binding Code}" Foreground="#666" FontFamily="monospace" FontSize="10"/>
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="1" IsChecked="{Binding Show}" HorizontalAlignment="Center"/>
+                                    <CheckBox Grid.Column="2" IsChecked="{Binding Translate}" HorizontalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="Settings save automatically." Foreground="#666" FontSize="11" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

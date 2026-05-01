@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Krile Helper
+GenericName=FFXIV Translator
+Comment=Real-time chat translation overlay for Final Fantasy XIV under Proton
+Exec=@BINARY@
+Icon=krile-helper
+Categories=Utility;Game;
+Terminal=false
+StartupNotify=true
+StartupWMClass=KrileHelper.UI
+Keywords=ffxiv;final;fantasy;translation;chat;mmorpg;

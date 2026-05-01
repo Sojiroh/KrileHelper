@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>KrileHelper.Linux.MemoryProbe</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sharlayan.Core\Sharlayan.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Old PoC files are now obsolete; they're replaced by Sharlayan.Core. -->
+    <Compile Remove="LinuxMemory.cs" />
+    <Compile Remove="ProcessFinder.cs" />
+    <Compile Remove="PEHeader.cs" />
+    <Compile Remove="SignatureScanner.cs" />
+    <Compile Remove="PointerResolver.cs" />
+    <Compile Remove="SignatureModel.cs" />
+    <Compile Remove="ChatEntry.cs" />
+    <Compile Remove="ChatCleaner.cs" />
+  </ItemGroup>
+</Project>
