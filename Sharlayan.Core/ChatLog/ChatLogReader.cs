@@ -7,6 +7,7 @@ namespace Sharlayan.Core.ChatLog;
 public sealed class ChatLogReader
 {
     private const int RingSlots = 1000;
+    private const int MaxLogBufferBytes = 16 * 1024 * 1024;
 
     private readonly INativeMemory _mem;
     private readonly int _pid;
@@ -53,11 +54,17 @@ public sealed class ChatLogReader
         if (offsetArrayStart == 0 || offsetArrayPos < offsetArrayStart || logStart == 0 || logNext < logStart)
             return result;
 
-        int currentArrayIndex = (int)((offsetArrayPos - offsetArrayStart) / 4);
-        if (currentArrayIndex == 0) return result;
+        long currentArrayIndexLong = (long)((offsetArrayPos - offsetArrayStart) / 4);
+        if (currentArrayIndexLong <= 0 || currentArrayIndexLong > RingSlots)
+            return result;
+
+        int currentArrayIndex = (int)currentArrayIndexLong;
 
         // Pull the offset array (uint32 entries pointing into the log buffer).
         var offsetBytes = _mem.ReadBytes(_pid, offsetArrayStart, RingSlots * 4);
+        if (offsetBytes.Length < RingSlots * 4)
+            return result;
+
         var indexes = new int[RingSlots];
         for (int i = 0; i < RingSlots; i++) indexes[i] = BitConverter.ToInt32(offsetBytes, i * 4);
 
@@ -72,9 +79,15 @@ public sealed class ChatLogReader
         // Bulk-read just the bytes of the log buffer we'll need.
         ulong logRangeStart = logStart;
         ulong logRangeEnd = logNext;
-        int logBufLen = (int)(logRangeEnd - logRangeStart);
+        long logBufLenLong = (long)(logRangeEnd - logRangeStart);
+        if (logBufLenLong <= 0) return result;
+        if (logBufLenLong > MaxLogBufferBytes) return result;
+
+        int logBufLen = (int)logBufLenLong;
         if (logBufLen <= 0) return result;
         var logBuf = _mem.ReadBytes(_pid, logRangeStart, logBufLen);
+        if (logBuf.Length < logBufLen)
+            return result;
 
         // Handle ring wrap: if currentArrayIndex regressed, drain to end of ring first.
         if (currentArrayIndex < _previousArrayIndex)
@@ -93,15 +106,30 @@ public sealed class ChatLogReader
 
     private void DrainRange(int from, int to, int[] indexes, byte[] logBuf, List<ChatLogItem> sink)
     {
+        if (from < 0 || to < 0 || from >= indexes.Length || from >= to)
+            return;
+
+        to = Math.Min(to, indexes.Length);
+
         for (int i = from; i < to; i++)
         {
             int currentOffset = indexes[i];
-            if (currentOffset <= _previousOffset || currentOffset > logBuf.Length)
+            if (currentOffset <= 0 || currentOffset > logBuf.Length)
+                return;
+
+            if (currentOffset <= _previousOffset)
             {
                 _previousOffset = currentOffset;
                 continue;
             }
+
             int len = currentOffset - _previousOffset;
+            if (len <= 0 || _previousOffset < 0 || _previousOffset > logBuf.Length || _previousOffset + len > logBuf.Length)
+            {
+                _previousOffset = currentOffset;
+                continue;
+            }
+
             var entryBytes = new byte[len];
             Array.Copy(logBuf, _previousOffset, entryBytes, 0, len);
             var item = ChatEntry.Process(entryBytes);

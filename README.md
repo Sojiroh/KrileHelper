@@ -39,6 +39,12 @@ cd MemoryProbe
 dotnet run -c Release
 ```
 
+Run tests:
+
+```sh
+dotnet test KrileHelper.sln -c Release
+```
+
 ## Packaging — single-file binary
 
 ```sh
@@ -87,6 +93,11 @@ overlay will sit on top correctly. Under X11 this is not an issue.
   https://www.deepl.com/pro-api (DeepL API Free, 500K chars/month, requires a
   card for verification but no charges). Paste the key in Settings → Engine →
   DeepL. Keys ending in `:fx` use the Free endpoint automatically.
+
+Translation sends enabled chat lines to the selected third-party backend. To
+reduce accidental disclosure, private/social channels such as tells, party,
+Free Company, linkshells, CWLS, alliance, and Novice Network are shown but not
+translated by default; enable them explicitly in Settings if desired.
 
 ## Configuration
 

@@ -8,7 +8,7 @@ public sealed class AppSettings
 
     /// <summary>
     /// Per-chat-code overrides. Only codes the user has touched are persisted;
-    /// missing entries fall back to defaults (Show=true, Translate=true).
+    /// missing entries fall back to each channel's bundled defaults.
     /// </summary>
     public Dictionary<string, ChannelSetting> Channels { get; set; } = new();
 }

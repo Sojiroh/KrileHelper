@@ -8,6 +8,7 @@ namespace KrileHelper.UI.ViewModels;
 public partial class ChannelSettingViewModel : ObservableObject
 {
     private readonly SettingsService _settings;
+    private readonly ChannelSetting _defaultSetting;
 
     public string Code { get; }
     public string Name { get; }
@@ -22,8 +23,9 @@ public partial class ChannelSettingViewModel : ObservableObject
         Name = info.Name;
         Color = info.Color;
         _settings = settings;
+        _defaultSetting = SettingsService.GetDefaultChannel(info);
 
-        var s = settings.GetChannel(info.Code);
+        var s = settings.GetChannel(info);
         _show = s.Show;
         _translate = s.Translate;
     }
@@ -34,7 +36,7 @@ public partial class ChannelSettingViewModel : ObservableObject
     private void Persist()
     {
         // Only store non-default values to keep settings.json lean.
-        if (Show && Translate)
+        if (Show == _defaultSetting.Show && Translate == _defaultSetting.Translate)
             _settings.Current.Channels.Remove(Code);
         else
             _settings.Current.Channels[Code] = new ChannelSetting { Show = Show, Translate = Translate };

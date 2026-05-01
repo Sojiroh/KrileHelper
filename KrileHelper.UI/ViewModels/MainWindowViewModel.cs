@@ -20,10 +20,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly MemoryClient _client = new();
     private ITranslator _translator;
     private string _lastEngineKey = "";
+    private readonly SemaphoreSlim _attachGate = new(1, 1);
     private readonly SemaphoreSlim _translationSlots = new(MaxConcurrentTranslations, MaxConcurrentTranslations);
+    private readonly object _activeTasksGate = new();
+    private readonly HashSet<Task> _activeTasks = new();
     private readonly DispatcherTimer _pollTimer;
     private readonly DispatcherTimer _reattachTimer;
     private readonly CancellationTokenSource _cts = new();
+    private readonly EventHandler _settingsChangedHandler;
     private bool _disposed;
 
     public SettingsService Settings { get; }
@@ -49,17 +53,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _pollTimer.Tick += OnPollTick;
 
         _reattachTimer = new DispatcherTimer { Interval = ReattachInterval };
-        _reattachTimer.Tick += (_, _) => _ = AttachAsync();
+        _reattachTimer.Tick += (_, _) => TrackTask(AttachAsync());
 
         ApplyVisualSettings();
-        Settings.Changed += (_, _) =>
+        _settingsChangedHandler = (_, _) =>
         {
+            if (_disposed) return;
             ApplyVisualSettings();
             RebuildTranslatorIfNeeded();
         };
+        Settings.Changed += _settingsChangedHandler;
 
         Hint = BuildPlatformHint();
-        _ = AttachAsync();
+        TrackTask(AttachAsync());
     }
 
     private static string EngineKey(TranslationSettings s) => $"{s.Engine}|{s.DeepLApiKey}";
@@ -93,35 +99,58 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private async Task AttachAsync()
     {
         if (_disposed) return;
-        Status = "Looking for ffxiv_dx11.exe…";
+        bool entered = false;
         try
         {
-            await _client.AttachAsync();
-            _client.ChatLog.Poll();
-            ProcessInfo = $"PID {_client.Process.Pid}  base 0x{_client.Process.ModuleBase:X}";
-            Status = $"Attached. Translator: {_translator.Name} → {Settings.Current.Translation.TargetLanguage}";
-            _reattachTimer.Stop();
-            _pollTimer.Start();
+            entered = await _attachGate.WaitAsync(0, _cts.Token);
+            if (!entered || _disposed) return;
+
+            Status = "Looking for ffxiv_dx11.exe…";
+            try
+            {
+                await _client.AttachAsync(_cts.Token);
+                _client.ChatLog.Poll();
+                ProcessInfo = $"PID {_client.Process.Pid}  base 0x{_client.Process.ModuleBase:X}";
+                Status = $"Attached. Translator: {_translator.Name} → {Settings.Current.Translation.TargetLanguage}";
+                StopReattachTimerSafe();
+                StartPollTimerSafe();
+            }
+            catch (FFXIVNotRunningException)
+            {
+                StopPollTimerSafe();
+                Status = "FF14 not running — retrying every 3s…";
+                StartReattachTimerSafe();
+            }
+            catch (SignatureScanFailedException ex)
+            {
+                StopPollTimerSafe();
+                Status = $"Signature '{ex.SignatureKey}' not found — resources may be outdated.";
+                StartReattachTimerSafe();
+            }
+            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+            {
+            }
+            catch (Exception ex)
+            {
+                StopPollTimerSafe();
+                Status = $"Attach error: {ex.Message}";
+                StartReattachTimerSafe();
+            }
         }
-        catch (FFXIVNotRunningException)
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {
-            Status = "FF14 not running — retrying every 3s…";
-            _reattachTimer.Start();
         }
-        catch (SignatureScanFailedException ex)
+        finally
         {
-            Status = $"Signature '{ex.SignatureKey}' not found — resources may be outdated.";
-            _reattachTimer.Start();
-        }
-        catch (Exception ex)
-        {
-            Status = $"Attach error: {ex.Message}";
-            _reattachTimer.Start();
+            if (entered)
+                _attachGate.Release();
         }
     }
 
     private void OnPollTick(object? sender, EventArgs e)
     {
+        if (_disposed) return;
+
         try
         {
             var items = _client.ChatLog.Poll();
@@ -131,7 +160,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 var info = Registry.Lookup(item.Code);
                 if (info is null) continue;
 
-                var channelPref = Settings.GetChannel(item.Code);
+                var channelPref = Settings.GetChannel(info);
                 if (!channelPref.Show) continue;
 
                 var display = ChatLineDisplay.Create(item, info);
@@ -139,7 +168,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 appended++;
 
                 if (channelPref.Translate && !string.IsNullOrWhiteSpace(display.Line))
-                    _ = TranslateAsync(display);
+                    TrackTask(TranslateAsync(display));
                 else
                     display.TranslationPending = false;
             }
@@ -153,10 +182,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (ProcessDetachedException)
         {
-            _pollTimer.Stop();
+            StopPollTimerSafe();
             Status = "FF14 closed — waiting for restart…";
             ProcessInfo = "";
-            _reattachTimer.Start();
+            StartReattachTimerSafe();
         }
         catch (Exception ex)
         {
@@ -173,20 +202,26 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async Task TranslateAsync(ChatLineDisplay display)
     {
-        await _translationSlots.WaitAsync(_cts.Token).ConfigureAwait(false);
+        bool entered = false;
         try
         {
+            await _translationSlots.WaitAsync(_cts.Token).ConfigureAwait(false);
+            entered = true;
+
             var (speaker, body) = SplitSpeaker(display.Line);
             var toTranslate = string.IsNullOrEmpty(body) ? display.Line : body;
             var src = Settings.Current.Translation.SourceLanguage;
             var tgt = Settings.Current.Translation.TargetLanguage;
             var result = await _translator.TranslateAsync(toTranslate, src, tgt, _cts.Token).ConfigureAwait(false);
+            if (_disposed || _cts.IsCancellationRequested) return;
+
             var combined = string.IsNullOrEmpty(speaker)
                 ? result.TranslatedText
                 : $"{speaker}: {result.TranslatedText}";
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
+                if (_disposed) return;
                 display.Translation = combined;
                 display.TranslationPending = false;
             });
@@ -194,27 +229,170 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         catch (OperationCanceledException) { /* shutting down */ }
         catch (Exception ex)
         {
+            if (_disposed) return;
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
+                if (_disposed) return;
                 display.TranslationError = ex.Message;
                 display.TranslationPending = false;
             });
         }
         finally
         {
-            _translationSlots.Release();
+            if (entered)
+                _translationSlots.Release();
         }
+    }
+
+    private void TrackTask(Task task)
+    {
+        lock (_activeTasksGate)
+        {
+            _activeTasks.Add(task);
+        }
+
+        task.ContinueWith(static (completedTask, state) =>
+        {
+            var viewModel = (MainWindowViewModel)state!;
+            _ = completedTask.Exception;
+            lock (viewModel._activeTasksGate)
+            {
+                viewModel._activeTasks.Remove(completedTask);
+            }
+        }, this, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
+    private void StopPollTimerSafe()
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            if (_pollTimer.IsEnabled)
+                _pollTimer.Stop();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_pollTimer.IsEnabled)
+                _pollTimer.Stop();
+        });
+    }
+
+    private void StartPollTimerSafe()
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            if (!_disposed && !_pollTimer.IsEnabled)
+                _pollTimer.Start();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_disposed && !_pollTimer.IsEnabled)
+                _pollTimer.Start();
+        });
+    }
+
+    private void StopReattachTimerSafe()
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            if (_reattachTimer.IsEnabled)
+                _reattachTimer.Stop();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_reattachTimer.IsEnabled)
+                _reattachTimer.Stop();
+        });
+    }
+
+    private void StartReattachTimerSafe()
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            if (!_disposed && !_reattachTimer.IsEnabled)
+                _reattachTimer.Start();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_disposed && !_reattachTimer.IsEnabled)
+                _reattachTimer.Start();
+        });
+    }
+
+    private Task[] SnapshotActiveTasks()
+    {
+        lock (_activeTasksGate)
+        {
+            return _activeTasks.ToArray();
+        }
+    }
+
+    private void DisposeResources()
+    {
+        _client.Dispose();
+        _attachGate.Dispose();
+        _cts.Dispose();
+        _translationSlots.Dispose();
+    }
+
+    private void DisposeResourcesAfterTasks(Task[] tasks)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+            finally
+            {
+                DisposeResources();
+            }
+        });
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        Settings.Changed -= _settingsChangedHandler;
         _cts.Cancel();
-        _pollTimer.Stop();
-        _reattachTimer.Stop();
-        _client.Dispose();
-        _cts.Dispose();
-        _translationSlots.Dispose();
+
+        StopPollTimerSafe();
+        StopReattachTimerSafe();
+
+        var activeTasks = SnapshotActiveTasks();
+        if (activeTasks.Length == 0)
+        {
+            DisposeResources();
+            return;
+        }
+
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            var all = Task.WhenAll(activeTasks);
+            try
+            {
+                if (all.Wait(TimeSpan.FromSeconds(2)))
+                {
+                    DisposeResources();
+                    return;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        DisposeResourcesAfterTasks(activeTasks);
     }
 }

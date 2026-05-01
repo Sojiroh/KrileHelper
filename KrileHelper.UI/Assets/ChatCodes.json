@@ -63,19 +63,22 @@
     "ChatCode": "000E",
     "MsgType": 3,
     "Name": "Party",
-    "Color": "#FF66E5FF"
+    "Color": "#FF66E5FF",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "000D",
     "MsgType": 3,
     "Name": "Tell",
-    "Color": "#FFFFB8DE"
+    "Color": "#FFFFB8DE",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0018",
     "MsgType": 3,
     "Name": "FreeCompany",
-    "Color": "#FFABDBE5"
+    "Color": "#FFABDBE5",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "001E",
@@ -87,109 +90,127 @@
     "ChatCode": "000F",
     "MsgType": 3,
     "Name": "Alliance",
-    "Color": "#FFFF7F00"
+    "Color": "#FFFF7F00",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0010",
     "MsgType": 3,
     "Name": "LinkShell1",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0011",
     "MsgType": 3,
     "Name": "LinkShell2",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0012",
     "MsgType": 3,
     "Name": "LinkShell3",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0013",
     "MsgType": 3,
     "Name": "LinkShell4",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0014",
     "MsgType": 3,
     "Name": "LinkShell5",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0015",
     "MsgType": 3,
     "Name": "LinkShell6",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0016",
     "MsgType": 3,
     "Name": "LinkShell7",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0017",
     "MsgType": 3,
     "Name": "LinkShell8",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0025",
     "MsgType": 3,
     "Name": "CWLS1",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0065",
     "MsgType": 3,
     "Name": "CWLS2",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0066",
     "MsgType": 3,
     "Name": "CWLS3",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0067",
     "MsgType": 3,
     "Name": "CWLS4",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0068",
     "MsgType": 3,
     "Name": "CWLS5",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "0069",
     "MsgType": 3,
     "Name": "CWLS6",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "006A",
     "MsgType": 3,
     "Name": "CWLS7",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "006B",
     "MsgType": 3,
     "Name": "CWLS8",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "001B",
     "MsgType": 3,
     "Name": "NoviceNetwork",
-    "Color": "#FFD4FF7D"
+    "Color": "#FFD4FF7D",
+    "TranslateByDefault": false
   },
   {
     "ChatCode": "001D",

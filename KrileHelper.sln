@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Translation.Core", "Transla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MemoryProbe", "MemoryProbe\MemoryProbe.csproj", "{72491AA4-F30F-4685-8DBF-F9B7F3D1918D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KrileHelper.Tests", "KrileHelper.Tests\KrileHelper.Tests.csproj", "{A4AC6E1D-5029-4324-9C6F-C94B0CDDA68B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{72491AA4-F30F-4685-8DBF-F9B7F3D1918D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72491AA4-F30F-4685-8DBF-F9B7F3D1918D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72491AA4-F30F-4685-8DBF-F9B7F3D1918D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4AC6E1D-5029-4324-9C6F-C94B0CDDA68B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4AC6E1D-5029-4324-9C6F-C94B0CDDA68B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4AC6E1D-5029-4324-9C6F-C94B0CDDA68B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4AC6E1D-5029-4324-9C6F-C94B0CDDA68B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

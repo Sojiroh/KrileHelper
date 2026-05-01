@@ -83,9 +83,15 @@ public sealed class SettingsService
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public ChannelSetting GetChannel(string code)
+    public ChannelSetting GetChannel(ChatCodeInfo info)
     {
-        if (Current.Channels.TryGetValue(code, out var s)) return s;
-        return new ChannelSetting();
+        if (Current.Channels.TryGetValue(info.Code, out var s)) return s;
+        return GetDefaultChannel(info);
     }
+
+    public static ChannelSetting GetDefaultChannel(ChatCodeInfo info) => new()
+    {
+        Show = true,
+        Translate = info.TranslateByDefault,
+    };
 }

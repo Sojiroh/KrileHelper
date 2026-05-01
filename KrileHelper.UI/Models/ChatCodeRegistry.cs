@@ -5,7 +5,7 @@ using Avalonia.Platform;
 
 namespace KrileHelper.UI.Models;
 
-public sealed record ChatCodeInfo(string Code, string Name, IBrush Color, int MsgType)
+public sealed record ChatCodeInfo(string Code, string Name, IBrush Color, int MsgType, bool TranslateByDefault = true)
 {
     public bool IsTranslatable => MsgType == 1;
 }
@@ -37,7 +37,8 @@ public sealed class ChatCodeRegistry
             d.ChatCode,
             d.Name,
             ParseBrush(d.Color),
-            d.MsgType));
+            d.MsgType,
+            d.TranslateByDefault));
         return new ChatCodeRegistry(infos);
     }
 
@@ -53,5 +54,6 @@ public sealed class ChatCodeRegistry
         public string Name { get; set; } = "";
         public string Color { get; set; } = "#FFFFFFFF";
         public int MsgType { get; set; }
+        public bool TranslateByDefault { get; set; } = true;
     }
 }
