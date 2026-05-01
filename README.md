@@ -105,6 +105,22 @@ All settings live at `~/.config/krile-helper/settings.json` and are written
 automatically when toggled in the in-app Settings dialog (⚙ button in the
 title bar). Hand-editing is fine if you prefer.
 
+Global overlay toggling is enabled by default with `Ctrl+Alt+Space`:
+
+```json
+{
+  "Hotkeys": {
+    "ToggleOverlayEnabled": true,
+    "ToggleOverlayShortcut": "Ctrl+Alt+Space"
+  }
+}
+```
+
+Under X11 this uses `XGrabKey`. Under Wayland it first tries the
+`org.freedesktop.portal.GlobalShortcuts` portal, which may prompt for user
+approval and depends on compositor/portal support; if unavailable, Krile Helper
+falls back to X11/XWayland when `DISPLAY` is present.
+
 ## Status & known limitations
 
 | | |
@@ -112,8 +128,8 @@ title bar). Hand-editing is fine if you prefer.
 | Chat log (post-dialog) | ✅ Works |
 | Translation overlay | ✅ Works |
 | Real-time NPC dialog panel | ❌ — Sharlayan signatures for `DIALOGPANEL_*` were dropped from upstream resources because they break each major patch. Lines appear in the overlay only after you advance past the in-game text panel. |
-| Global hotkeys | ❌ — not yet implemented |
-| System tray | ❌ — not yet implemented |
+| Global hotkeys | ✅ — `Ctrl+Alt+Space` toggles the overlay; X11 native, Wayland via GlobalShortcuts portal when supported |
+| System tray | ✅ — Avalonia tray icon backed by Linux StatusNotifier/DBus; GNOME may require an AppIndicator/KStatusNotifier extension |
 
 ## License
 

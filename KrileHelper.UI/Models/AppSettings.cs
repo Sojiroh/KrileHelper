@@ -5,12 +5,19 @@ public sealed class AppSettings
     public int Version { get; set; } = 1;
     public TranslationSettings Translation { get; set; } = new();
     public WindowSettings Window { get; set; } = new();
+    public HotkeySettings Hotkeys { get; set; } = new();
 
     /// <summary>
     /// Per-chat-code overrides. Only codes the user has touched are persisted;
     /// missing entries fall back to each channel's bundled defaults.
     /// </summary>
     public Dictionary<string, ChannelSetting> Channels { get; set; } = new();
+}
+
+public sealed class HotkeySettings
+{
+    public bool ToggleOverlayEnabled { get; set; } = true;
+    public string ToggleOverlayShortcut { get; set; } = "Ctrl+Alt+Space";
 }
 
 public sealed class TranslationSettings

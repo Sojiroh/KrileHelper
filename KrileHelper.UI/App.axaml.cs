@@ -13,6 +13,8 @@ public partial class App : Application
 {
     public SettingsService Settings { get; private set; } = null!;
     public ChatCodeRegistry Registry { get; private set; } = null!;
+    private GlobalHotkeyService? _hotkeys;
+    private TrayIconService? _trayIcon;
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -23,15 +25,38 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // Tray-driven app: keep the process alive when the overlay window is hidden.
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            var isShuttingDown = false;
             var vm = new MainWindowViewModel(Settings, Registry);
             var window = new MainWindow { DataContext = vm };
             ApplyWindowSettings(window, Settings.Current.Window);
-            window.Closing += (_, _) => CaptureWindowSettings(window);
+            var overlay = new OverlayWindowController(window, () => CaptureWindowSettings(window));
+            window.HideRequested += (_, _) => overlay.HideOverlay();
+            window.Closing += (_, e) =>
+            {
+                if (!isShuttingDown)
+                {
+                    e.Cancel = true;
+                    overlay.HideOverlay();
+                    return;
+                }
+
+                CaptureWindowSettings(window);
+            };
+
+            _trayIcon = new TrayIconService(this, desktop, overlay);
+            _hotkeys = new GlobalHotkeyService(Settings.Current.Hotkeys, overlay);
+            _ = _hotkeys.StartAsync();
 
             desktop.MainWindow = window;
             desktop.ShutdownRequested += (_, _) =>
             {
+                isShuttingDown = true;
                 CaptureWindowSettings(window);
+                _trayIcon?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                _hotkeys?.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 vm.Dispose();
             };
         }

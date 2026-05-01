@@ -9,6 +9,8 @@ public partial class MainWindow : Window
 {
     private SettingsWindow? _settingsWindow;
 
+    public event EventHandler? HideRequested;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -33,9 +35,11 @@ public partial class MainWindow : Window
             BeginResizeDrag(WindowEdge.SouthEast, e);
     }
 
-    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => HideRequested?.Invoke(this, EventArgs.Empty);
 
-    private void OnSettingsClick(object? sender, RoutedEventArgs e)
+    private void OnSettingsClick(object? sender, RoutedEventArgs e) => ShowSettingsWindow();
+
+    public void ShowSettingsWindow()
     {
         if (DataContext is not MainWindowViewModel vm) return;
 
