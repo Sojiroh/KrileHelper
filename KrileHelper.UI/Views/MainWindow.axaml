@@ -38,41 +38,47 @@
                 </Grid>
             </Border>
 
-            <ScrollViewer Grid.Row="1" Name="ChatScroll" Padding="8" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-                <!-- MaxWidth pins content to the viewport: if a layout pass ever hands an
-                     item a slot wider than the window (observed on Linux: last translation
-                     rendered unwrapped and clipped at the window edge), the clamp forces
-                     re-wrap instead of clipping. -->
-                <ItemsControl ItemsSource="{Binding Lines}"
-                              MaxWidth="{Binding Viewport.Width, ElementName=ChatScroll}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="m:ChatLineDisplay">
-                            <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,3">
-                                <TextBlock Grid.Column="0" Text="{Binding TimeStamp, StringFormat='{}{0:HH:mm:ss}'}"
-                                           Foreground="#666" FontFamily="Inter,monospace" FontSize="11"
-                                           VerticalAlignment="Top" Margin="0,2,8,0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding ChannelName}"
-                                           Foreground="#5C8DC9" FontFamily="monospace" FontSize="11" FontWeight="SemiBold"
-                                           VerticalAlignment="Top" Margin="0,2,8,0" MinWidth="50"/>
-                                <StackPanel Grid.Column="2" Spacing="1">
-                                    <TextBlock Text="{Binding Line}"
-                                               Foreground="{Binding Color}" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding Translation}"
-                                               Foreground="#FFE6B450" TextWrapping="Wrap" FontStyle="Italic"
-                                               IsVisible="{Binding Translation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                    <TextBlock Text="(translating…)"
-                                               Foreground="#777" FontSize="10" FontStyle="Italic"
-                                               IsVisible="{Binding TranslationPending}"/>
-                                    <TextBlock Text="{Binding TranslationError, StringFormat='[translation error: {0}]'}"
-                                               Foreground="#CC6666" FontSize="10"
-                                               IsVisible="{Binding TranslationError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <!-- Padding lives on this Border, NOT the ScrollViewer: with padding on the
+                 ScrollViewer, Avalonia's ScrollContentPresenter arranges the content 2×padding
+                 shorter than its measured height, so the scroll extent falls short and the
+                 last lines become unreachable (avalonia#12182 class of bug). -->
+            <Border Grid.Row="1" Padding="8">
+                <ScrollViewer Name="ChatScroll" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <!-- MaxWidth pins content to the viewport: if a layout pass ever hands an
+                         item a slot wider than the window (observed on Linux: last translation
+                         rendered unwrapped and clipped at the window edge), the clamp forces
+                         re-wrap instead of clipping. -->
+                    <ItemsControl ItemsSource="{Binding Lines}"
+                                  MaxWidth="{Binding Viewport.Width, ElementName=ChatScroll}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="m:ChatLineDisplay">
+                                <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,3">
+                                    <TextBlock Grid.Column="0" Text="{Binding TimeStamp, StringFormat='{}{0:HH:mm:ss}'}"
+                                               Foreground="#666" FontFamily="Inter,monospace" FontSize="11"
+                                               VerticalAlignment="Top" Margin="0,2,8,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ChannelName}"
+                                               Foreground="#5C8DC9" FontFamily="monospace" FontSize="11" FontWeight="SemiBold"
+                                               VerticalAlignment="Top" Margin="0,2,8,0" MinWidth="50"/>
+                                    <StackPanel Grid.Column="2" Spacing="1">
+                                        <TextBlock Text="{Binding Line}"
+                                                   Foreground="{Binding Color}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Translation}"
+                                                   Foreground="#FFE6B450" TextWrapping="Wrap" FontStyle="Italic"
+                                                   IsVisible="{Binding Translation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                        <TextBlock Text="(translating…)"
+                                                   Foreground="#777" FontSize="10" FontStyle="Italic"
+                                                   IsVisible="{Binding TranslationPending}"/>
+                                        <TextBlock Text="{Binding TranslationError, StringFormat='[translation error: {0}]'}"
+                                                   Foreground="#CC6666" FontSize="10"
+                                                   IsVisible="{Binding TranslationError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
 
             <Border Grid.Row="2" Background="#FF1F1F25" Padding="12,4,4,4" CornerRadius="0,0,8,8">
                 <Grid ColumnDefinitions="*,Auto">

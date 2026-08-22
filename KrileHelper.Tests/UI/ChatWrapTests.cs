@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
@@ -12,10 +13,14 @@ using KrileHelper.UI.ViewModels;
 using Sharlayan.Core.ChatLog;
 
 // Regression tests for the chat overlay layout contract: translated chat text
-// must always wrap within the chat viewport. A user report showed the newest
-// translation rendered on a single line and clipped at the window edge once
-// message history existed; the fix pins the ItemsControl width to the
-// ScrollViewer viewport so a bogus-wide layout slot gets clamped and re-wrapped.
+// must always wrap within the chat viewport, and the newest content must stay
+// reachable/visible when the user is pinned to the bottom. Two fixes are
+// covered: (1) the ItemsControl width is pinned to the ScrollViewer viewport so
+// a bogus-wide layout slot gets clamped and re-wrapped instead of clipping, and
+// (2) padding lives outside the ScrollViewer (otherwise Avalonia's extent falls
+// short of the content and the last lines are unreachable) plus a re-pin on
+// extent growth so lines/translations arriving after layout keep the newest
+// content visible.
 [assembly: AvaloniaTestApplication(typeof(KrileHelper.Tests.UI.ChatLayoutTestApp))]
 
 namespace KrileHelper.Tests.UI;
@@ -72,6 +77,49 @@ public sealed class ChatWrapTests
         Assert.Equal(harness.ChatScroll.Viewport.Width, harness.ChatItems.MaxWidth, 0.5);
     }
 
+    [AvaloniaFact]
+    public void NewestLineStaysVisibleWhenPinnedToBottom()
+    {
+        using var harness = new ChatWindowHarness(width: 802, height: 435);
+
+        // History tall enough to scroll.
+        for (int i = 0; i < 25; i++)
+            harness.AddLine("0039",
+                "Updating online status. No longer away from keyboard.",
+                "Actualización del estado en línea. Ya no estás lejos del teclado.");
+
+        // The scroll extent must cover the whole content, not fall short of it.
+        Assert.True(harness.ChatScroll.Extent.Height >= harness.LastItem.Bounds.Y + harness.LastItem.Bounds.Height - 1.0,
+            "scroll extent is shorter than the content — the newest line is unreachable");
+
+        // A new line followed by its translation arriving later must stay visible.
+        harness.AddLineDelayed("003D",
+            "Oiika Tsunjika:Welcome back, Pumpkina! Ready for a nap?",
+            "Oiika Tsuniika: ¡Bienvenida de nuevo, Calabaza! ¿Listo para una siesta?");
+        Assert.True(harness.IsLastItemVisible(), "newest line is hidden below the fold after its translation arrived");
+    }
+
+    [AvaloniaFact]
+    public void ScrollingUpIsNotYankedDownByNewLines()
+    {
+        using var harness = new ChatWindowHarness(width: 802, height: 435);
+
+        for (int i = 0; i < 25; i++)
+            harness.AddLine("0039",
+                "Updating online status. No longer away from keyboard.",
+                "Actualización del estado en línea. Ya no estás lejos del teclado.");
+
+        harness.ChatScroll.Offset = new Vector(0, 0);
+        harness.Layout();
+
+        harness.AddLine("0039",
+            "Updating online status. No longer away from keyboard.",
+            "Actualización del estado en línea. Ya no estás lejos del teclado.");
+
+        Assert.True(harness.ChatScroll.Offset.Y < 5,
+            $"reading history was interrupted: offset {harness.ChatScroll.Offset.Y}");
+    }
+
     private sealed class ChatWindowHarness : IDisposable
     {
         private readonly MainWindow _window;
@@ -102,8 +150,32 @@ public sealed class ChatWrapTests
             display.Translation = translation;
             display.TranslationPending = false;
             _vm.Lines.Add(display);
-            ChatScroll.ScrollToEnd();
             Layout();
+        }
+
+        // Mimics the real flow: the line appears, and only later (after layout)
+        // does its translation land, growing the last item.
+        public ChatLineDisplay AddLineDelayed(string code, string text, string translation)
+        {
+            var info = _registry.Lookup(code)!;
+            var display = ChatLineDisplay.Create(
+                new ChatLogItem { TimeStamp = DateTime.Now, Code = code, Line = text }, info);
+            _vm.Lines.Add(display);
+            Layout();
+            display.Translation = translation;
+            display.TranslationPending = false;
+            Layout();
+            return display;
+        }
+
+        public ContentPresenter LastItem =>
+            _window.GetVisualDescendants().OfType<ContentPresenter>()
+                .Last(cp => cp.DataContext is ChatLineDisplay);
+
+        public bool IsLastItemVisible()
+        {
+            var last = LastItem;
+            return last.Bounds.Y + last.Bounds.Height - ChatScroll.Offset.Y <= ChatScroll.Viewport.Height + 0.5;
         }
 
         public void Resize(double width, double height)
@@ -133,7 +205,7 @@ public sealed class ChatWrapTests
             }
         }
 
-        private void Layout()
+        public void Layout()
         {
             Dispatcher.UIThread.RunJobs();
             _window.UpdateLayout();
