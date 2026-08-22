@@ -38,8 +38,14 @@
                 </Grid>
             </Border>
 
-            <ScrollViewer Grid.Row="1" Name="ChatScroll" Padding="8" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding Lines}">
+            <ScrollViewer Grid.Row="1" Name="ChatScroll" Padding="8" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <!-- MaxWidth pins content to the viewport: if a layout pass ever hands an
+                     item a slot wider than the window (observed on Linux: last translation
+                     rendered unwrapped and clipped at the window edge), the clamp forces
+                     re-wrap instead of clipping. -->
+                <ItemsControl ItemsSource="{Binding Lines}"
+                              MaxWidth="{Binding Viewport.Width, ElementName=ChatScroll}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="m:ChatLineDisplay">
                             <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,3">
