@@ -54,6 +54,17 @@ public sealed class SettingsService
         {
             var json = File.ReadAllText(FilePath);
             Current = JsonSerializer.Deserialize<AppSettings>(json, JsonOpts) ?? new AppSettings();
+            using var document = JsonDocument.Parse(json);
+            if (TryGetProperty(document.RootElement, "Translation", out var translation) &&
+                TryGetProperty(translation, "DeepLApiKey", out var legacyKey) &&
+                legacyKey.ValueKind == JsonValueKind.String &&
+                !Current.Translation.Providers.ContainsKey(TranslatorFactory.DeepL))
+            {
+                Current.Translation.Providers[TranslatorFactory.DeepL] =
+                    new Translation.Core.ProviderSettings { ApiKey = legacyKey.GetString() ?? "" };
+                Current.Version = 2;
+                Save();
+            }
         }
         catch
         {
@@ -63,12 +74,38 @@ public sealed class SettingsService
         }
     }
 
+    private static bool TryGetProperty(JsonElement value, string name, out JsonElement property)
+    {
+        if (value.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var candidate in value.EnumerateObject())
+                if (string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    property = candidate.Value;
+                    return true;
+                }
+        }
+        property = default;
+        return false;
+    }
+
     public void Save()
     {
         try
         {
             var tmp = FilePath + ".tmp";
-            File.WriteAllText(tmp, JsonSerializer.Serialize(Current, JsonOpts));
+            var options = new FileStreamOptions
+            {
+                Mode = FileMode.Create,
+                Access = FileAccess.Write,
+                Share = FileShare.None,
+            };
+            if (OperatingSystem.IsLinux())
+                options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            using (var writer = new StreamWriter(new FileStream(tmp, options)))
+                writer.Write(JsonSerializer.Serialize(Current, JsonOpts));
+            if (OperatingSystem.IsLinux())
+                File.SetUnixFileMode(tmp, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             File.Move(tmp, FilePath, overwrite: true);
         }
         catch

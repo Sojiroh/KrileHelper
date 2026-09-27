@@ -44,6 +44,10 @@ public sealed class GoogleFreeTranslator : ITranslator
             await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
             return ParseResponse(stream);
         }
+        catch (JsonException ex)
+        {
+            throw new TranslationException("Google returned malformed JSON.", ex);
+        }
         catch (HttpRequestException ex)
         {
             throw new TranslationException("Network error contacting Google.", ex);

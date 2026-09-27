@@ -70,11 +70,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        _settingsWindow = new SettingsWindow
+        var settingsViewModel = new SettingsWindowViewModel(vm.Settings, vm.Registry, vm.ReferenceTranslations);
+        _settingsWindow = new SettingsWindow { DataContext = settingsViewModel };
+        _settingsWindow.Closed += (_, _) =>
         {
-            DataContext = new SettingsWindowViewModel(vm.Settings, vm.Registry),
+            settingsViewModel.Dispose();
+            _settingsWindow = null;
         };
-        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show(this);
     }
 }

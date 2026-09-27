@@ -15,6 +15,7 @@ public partial class App : Application
     public ChatCodeRegistry Registry { get; private set; } = null!;
     private GlobalHotkeyService? _hotkeys;
     private TrayIconService? _trayIcon;
+    private DialogueOverlayController? _dialogueOverlay;
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -32,6 +33,7 @@ public partial class App : Application
             var vm = new MainWindowViewModel(Settings, Registry);
             var window = new MainWindow { DataContext = vm };
             ApplyWindowSettings(window, Settings.Current.Window);
+            _dialogueOverlay = new DialogueOverlayController(vm, window);
             var overlay = new OverlayWindowController(window, () => CaptureWindowSettings(window));
             window.HideRequested += (_, _) => overlay.HideOverlay();
             window.Closing += (_, e) =>
@@ -55,6 +57,7 @@ public partial class App : Application
             {
                 isShuttingDown = true;
                 CaptureWindowSettings(window);
+                _dialogueOverlay?.Dispose();
                 _trayIcon?.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 _hotkeys?.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 vm.Dispose();

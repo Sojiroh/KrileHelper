@@ -18,13 +18,11 @@ public sealed class DeepLTranslator : ITranslator
     private readonly string _endpoint;
 
     public string Name { get; }
+    public string CacheScope => $"{Name}:{_apiKey}";
 
     public DeepLTranslator(string apiKey, HttpClient? http = null)
     {
-        if (string.IsNullOrWhiteSpace(apiKey))
-            throw new ArgumentException("DeepL API key is required.", nameof(apiKey));
-
-        _apiKey = apiKey.Trim();
+        _apiKey = apiKey?.Trim() ?? string.Empty;
         bool isFree = _apiKey.EndsWith(":fx", StringComparison.OrdinalIgnoreCase);
         _endpoint = isFree ? FreeEndpoint : ProEndpoint;
         Name = isFree ? "DeepL Free" : "DeepL Pro";
@@ -34,6 +32,9 @@ public sealed class DeepLTranslator : ITranslator
 
     public async Task<TranslationResult> TranslateAsync(string text, string sourceLang, string targetLang, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(_apiKey))
+            throw new TranslationException("DeepL API key is required. Configure it in Settings.");
+
         if (string.IsNullOrWhiteSpace(text))
             return new TranslationResult("", sourceLang, Name);
 
@@ -77,7 +78,9 @@ public sealed class DeepLTranslator : ITranslator
     private static async Task<TranslationException> BuildHttpErrorAsync(HttpResponseMessage resp, CancellationToken ct)
     {
         string body = "";
-        try { body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false); } catch { }
+        try { body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { }
         var snippet = body.Length > 200 ? body[..200] + "…" : body;
         return (int)resp.StatusCode switch
         {
@@ -90,20 +93,30 @@ public sealed class DeepLTranslator : ITranslator
 
     private TranslationResult ParseResponse(Stream stream, string requestedSource)
     {
-        using var doc = JsonDocument.Parse(stream);
-        var root = doc.RootElement;
-        if (!root.TryGetProperty("translations", out var translations) || translations.ValueKind != JsonValueKind.Array)
-            throw new TranslationException("Unexpected DeepL response shape.");
-
-        var sb = new StringBuilder();
-        string detected = requestedSource;
-        foreach (var t in translations.EnumerateArray())
+        try
         {
-            if (t.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String)
-                sb.Append(text.GetString());
-            if (t.TryGetProperty("detected_source_language", out var dsl) && dsl.ValueKind == JsonValueKind.String)
-                detected = dsl.GetString()?.ToLowerInvariant() ?? detected;
+            using var doc = JsonDocument.Parse(stream);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("translations", out var translations) ||
+                translations.ValueKind != JsonValueKind.Array)
+                throw new TranslationException("Unexpected DeepL response shape.");
+
+            var sb = new StringBuilder();
+            string detected = requestedSource;
+            foreach (var t in translations.EnumerateArray())
+            {
+                if (t.ValueKind != JsonValueKind.Object) continue;
+                if (t.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String)
+                    sb.Append(text.GetString());
+                if (t.TryGetProperty("detected_source_language", out var dsl) && dsl.ValueKind == JsonValueKind.String)
+                    detected = dsl.GetString()?.ToLowerInvariant() ?? detected;
+            }
+            return new TranslationResult(sb.ToString(), detected, Name);
         }
-        return new TranslationResult(sb.ToString(), detected, Name);
+        catch (JsonException ex)
+        {
+            throw new TranslationException("DeepL returned malformed JSON.", ex);
+        }
     }
 }

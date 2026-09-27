@@ -1,6 +1,8 @@
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Sharlayan.Core.ChatLog;
+using Sharlayan.Core.Dialogue;
+using KrileHelper.UI.Services;
 
 namespace KrileHelper.UI.Models;
 
@@ -11,6 +13,8 @@ public partial class ChatLineDisplay : ObservableObject
     public string ChannelName { get; }
     public string Line { get; }
     public IBrush Color { get; }
+    public GameAssets? Assets { get; set; }
+    public string DisplayLine => CrossWorldNames.Mark(Line, Assets?.Worlds ?? Array.Empty<string>());
 
     [ObservableProperty] private string? _translation;
     [ObservableProperty] private bool _translationPending;

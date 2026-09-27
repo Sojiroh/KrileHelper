@@ -52,7 +52,12 @@ public sealed class ResourceLoader
                 d.PointerPath,
                 d.ASMSignature))
             .ToList();
-
+        if (sigs.All(s => !s.Key.Equals("PLAYERSTATE", StringComparison.OrdinalIgnoreCase)))
+        {
+            sigs.Add(new Scanning.Signature("PLAYERSTATE",
+                "48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 75 06 F6 43 18 02",
+                Array.Empty<long>(), isAsm: true));
+        }
         return (sigs, structs);
     }
 

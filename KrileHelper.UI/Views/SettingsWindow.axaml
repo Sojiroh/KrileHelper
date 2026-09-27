@@ -5,63 +5,102 @@
         x:Class="KrileHelper.UI.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
         Title="Krile Settings"
-        Width="480" Height="600"
+        Width="540" Height="760" MinWidth="440" MinHeight="480"
         WindowStartupLocation="CenterOwner"
         Background="#FF1A1A1F">
 
-    <ScrollViewer Padding="16">
-        <StackPanel Spacing="16">
+    <Border Padding="16">
+      <ScrollViewer Name="SettingsScroll" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="16" MaxWidth="{Binding Viewport.Width, ElementName=SettingsScroll}">
 
             <!-- Translation -->
             <Border Background="#FF26262C" CornerRadius="6" Padding="12">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Translation" Foreground="#E5E5E5" FontWeight="SemiBold" FontSize="14"/>
 
-                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Engine:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,0,8,3"/>
-                        <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,3"
-                                  ItemsSource="{Binding EngineOptions}"
-                                  SelectedItem="{Binding SelectedEngine}"
-                                  HorizontalAlignment="Stretch">
+                    <ComboBox ItemsSource="{Binding EngineOptions}" SelectedItem="{Binding SelectedEngine}"
+                              HorizontalAlignment="Stretch" AutomationProperties.Name="Translation engine">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate DataType="svc:EngineOption">
+                                <TextBlock Text="{Binding Display}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Text="{Binding EngineHelp}" Foreground="#AAA" FontSize="12" TextWrapping="Wrap"/>
+                    <StackPanel Spacing="4" IsVisible="{Binding SupportsApiKey}">
+                        <TextBlock Text="API key" Foreground="#AAA"/>
+                        <TextBox Text="{Binding ApiKey}" PasswordChar="•" Watermark="Provider API key"
+                                 AutomationProperties.Name="API key"/>
+                    </StackPanel>
+                    <StackPanel Spacing="4" IsVisible="{Binding SupportsEndpoint}">
+                        <TextBlock Text="Server endpoint" Foreground="#AAA"/>
+                        <TextBox Text="{Binding Endpoint}" Watermark="{Binding EndpointHint}"
+                                 AutomationProperties.Name="Server endpoint"/>
+                    </StackPanel>
+                    <StackPanel Spacing="4" IsVisible="{Binding SupportsModel}">
+                        <TextBlock Text="Model" Foreground="#AAA"/>
+                        <TextBox Text="{Binding Model}" Watermark="{Binding ModelHint}" AutomationProperties.Name="Model"/>
+                    </StackPanel>
+                    <StackPanel Spacing="4" IsVisible="{Binding SupportsRegion}">
+                        <TextBlock Text="Region / folder ID" Foreground="#AAA"/>
+                        <TextBox Text="{Binding Region}" AutomationProperties.Name="Region or folder ID"/>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                        <TextBlock Text="Source language" Foreground="#AAA"/>
+                        <TextBlock Grid.Column="1" Text="Translate to" Foreground="#AAA" Margin="8,0,0,0"/>
+                        <ComboBox Grid.Row="1" ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}"
+                                  HorizontalAlignment="Stretch" Margin="0,4,4,0" AutomationProperties.Name="Source language">
                             <ComboBox.ItemTemplate>
-                                <DataTemplate DataType="svc:EngineOption">
-                                    <TextBlock Text="{Binding Display}"/>
-                                </DataTemplate>
+                                <DataTemplate DataType="svc:LanguageOption"><TextBlock Text="{Binding Display}"/></DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="DeepL key:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,3,8,3"
-                                   IsVisible="{Binding IsDeepL}"/>
-                        <TextBox Grid.Row="1" Grid.Column="1" Margin="0,3,0,3"
-                                 Text="{Binding DeepLApiKey}"
-                                 PasswordChar="•"
-                                 Watermark="Paste your DeepL API key here (ends with :fx for Free tier)"
-                                 IsVisible="{Binding IsDeepL}"/>
-
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Source:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,3,8,3"/>
-                        <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,3,0,3"
-                                  ItemsSource="{Binding SourceOptions}"
-                                  SelectedItem="{Binding SelectedSource}"
-                                  HorizontalAlignment="Stretch">
+                        <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TargetOptions}" SelectedItem="{Binding SelectedTarget}"
+                                  HorizontalAlignment="Stretch" Margin="4,4,0,0" AutomationProperties.Name="Target language">
                             <ComboBox.ItemTemplate>
-                                <DataTemplate DataType="svc:LanguageOption">
-                                    <TextBlock Text="{Binding Display}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Target:" Foreground="#AAA" VerticalAlignment="Center" Margin="0,3,8,0"/>
-                        <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,3,0,0"
-                                  ItemsSource="{Binding TargetOptions}"
-                                  SelectedItem="{Binding SelectedTarget}"
-                                  HorizontalAlignment="Stretch">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate DataType="svc:LanguageOption">
-                                    <TextBlock Text="{Binding Display}"/>
-                                </DataTemplate>
+                                <DataTemplate DataType="svc:LanguageOption"><TextBlock Text="{Binding Display}"/></DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
+                    <CheckBox Content="Translate NPC speaker names" IsChecked="{Binding TranslateNpcNames}" Foreground="#CCC"/>
+                    <CheckBox Content="Translate player speaker names" IsChecked="{Binding TranslatePlayerNames}" Foreground="#CCC"/>
+                    <TextBlock Text="Your character's name and cross-world names in messages are protected. Only explicitly enabled channels are sent to the selected service; local engines never fall back to a cloud service."
+                               Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF26262C" CornerRadius="6" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Live dialogue" Foreground="#E5E5E5" FontWeight="SemiBold" FontSize="14"/>
+                    <CheckBox Content="Read dialogue, subtitles, bubbles and choices live"
+                              IsChecked="{Binding LiveDialogueEnabled}" Foreground="#CCC"/>
+                    <CheckBox Content="Place translations over the game's dialogue boxes"
+                              IsChecked="{Binding DialogueOverlayEnabled}" Foreground="#CCC"
+                              IsEnabled="{Binding LiveDialogueEnabled}"/>
+                    <TextBlock Text="The aligned overlay is click-through and follows the game's UI. Speech bubbles stay in the chat window. Requires an accessible X11/XWayland game window; compositor stacking rules still apply."
+                               Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF26262C" CornerRadius="6" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Hand-written Russian translations" Foreground="#E5E5E5" FontWeight="SemiBold" FontSize="14"/>
+                    <CheckBox Content="Look up reference translations before using an engine"
+                              IsChecked="{Binding ReferenceEnabled}" Foreground="#CCC"/>
+                    <TextBlock Text="Applies only when the target is Russian. Missing lines use your selected engine. Downloading the XIV Rus dataset can use hundreds of megabytes."
+                               Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
+                    <TextBlock Text="Game language for the reference index" Foreground="#AAA"/>
+                    <ComboBox ItemsSource="{Binding GameLanguageOptions}" SelectedItem="{Binding SelectedGameLanguage}"
+                              HorizontalAlignment="Stretch" AutomationProperties.Name="Reference game language">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate DataType="svc:LanguageOption"><TextBlock Text="{Binding Display}"/></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Download / update index" Command="{Binding UpdateReferenceCommand}"/>
+                        <Button Content="Cancel" Command="{Binding UpdateReferenceCancelCommand}"
+                                IsVisible="{Binding UpdateReferenceCommand.IsRunning}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding ReferenceStatus}" Foreground="#AAA" FontSize="12" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
@@ -115,5 +154,6 @@
 
             <TextBlock Text="Settings save automatically." Foreground="#666" FontSize="11" HorizontalAlignment="Center"/>
         </StackPanel>
-    </ScrollViewer>
+      </ScrollViewer>
+    </Border>
 </Window>

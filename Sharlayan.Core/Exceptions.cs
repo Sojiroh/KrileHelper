@@ -23,3 +23,9 @@ public sealed class ProcessDetachedException : SharlayanException
 {
     public ProcessDetachedException() : base("The attached FFXIV process is no longer running.") { }
 }
+
+public sealed class NativeMemoryReadException : InvalidOperationException
+{
+    public int ErrorCode { get; }
+    public NativeMemoryReadException(int errorCode, string message) : base(message) => ErrorCode = errorCode;
+}

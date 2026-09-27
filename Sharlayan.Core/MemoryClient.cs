@@ -1,4 +1,5 @@
 using Sharlayan.Core.ChatLog;
+using Sharlayan.Core.Dialogue;
 using Sharlayan.Core.Native;
 using Sharlayan.Core.Process;
 using Sharlayan.Core.Resources;
@@ -14,6 +15,8 @@ public sealed class MemoryClient : IDisposable
     private StructuresContainer? _structs;
     private AttachedProcess? _process;
     private ChatLogReader? _chatLog;
+    private LiveDialogueReader? _dialogue;
+    private string _gameLanguage = string.Empty;
 
     public MemoryClient(ResourceLoader? resources = null, INativeMemory? memory = null)
     {
@@ -26,6 +29,15 @@ public sealed class MemoryClient : IDisposable
 
     public ChatLogReader ChatLog =>
         _chatLog ?? throw new InvalidOperationException("Not attached. Call AttachAsync first.");
+
+    /// <summary>Live Talk/TalkSubtitle/MiniTalk/choice state from the attached client.</summary>
+    public LiveDialogueReader Dialogue =>
+        _dialogue ?? throw new InvalidOperationException("Not attached. Call AttachAsync first.");
+
+    public string GameExecutablePath => _process?.ExecutablePath ?? string.Empty;
+    public string GameLanguage => _gameLanguage;
+    public string PlayerName => _dialogue?.PlayerName ?? string.Empty;
+    public bool? PlayerIsFeminine => _dialogue?.PlayerIsFeminine;
 
     public bool IsAttached => _process is not null && _process.IsAlive;
 
@@ -52,7 +64,12 @@ public sealed class MemoryClient : IDisposable
         if (chatSig.SigScanAddress == 0)
             throw new SignatureScanFailedException("CHATLOG");
 
+        var playerStateSig = sigs.FirstOrDefault(s => s.Key == "PLAYERSTATE" && s.SigScanAddress != 0);
         _chatLog = new ChatLogReader(_mem, ff.Pid, chatSig, structs.ChatLogPointers);
+        _dialogue = new LiveDialogueReader(_mem, ff.Pid, chatSig,
+            structs.Dialogue ?? DialogueMemoryLayout.Default, playerStateSig);
+        _gameLanguage = GameClientLanguage.Detect(ff.ExecutablePath);
+
     }
 
     /// <summary>Re-runs FindFFXIV + scan (e.g. after the game was restarted or patched).</summary>
@@ -60,6 +77,8 @@ public sealed class MemoryClient : IDisposable
     {
         _process = null;
         _chatLog = null;
+        _dialogue = null;
+        _gameLanguage = string.Empty;
         return AttachAsync(ct);
     }
 
@@ -74,5 +93,7 @@ public sealed class MemoryClient : IDisposable
     {
         _process = null;
         _chatLog = null;
+        _dialogue = null;
+        _gameLanguage = string.Empty;
     }
 }

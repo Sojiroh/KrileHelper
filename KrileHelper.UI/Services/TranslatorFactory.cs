@@ -8,25 +8,20 @@ public static class TranslatorFactory
     public const string GoogleFree = "GoogleFree";
     public const string DeepL = "DeepL";
 
-    public static IReadOnlyList<EngineOption> Available { get; } = new[]
-    {
-        new EngineOption(GoogleFree, "Google Translate (free)"),
-        new EngineOption(DeepL, "DeepL (API key)"),
-    };
+    public static IReadOnlyList<EngineOption> Available { get; } = TranslationEngines.All
+        .Select(engine => new EngineOption(engine.Id, engine.DisplayName)).ToArray();
 
-    public static ITranslator Create(TranslationSettings s)
+    public static ITranslator Create(TranslationSettings settings) =>
+        new CachedTranslator(TranslationEngines.Create(settings.Engine, settings.GetProvider()));
+
+    public static string ConfigurationKey(TranslationSettings settings)
     {
-        return s.Engine switch
+        var provider = settings.GetProvider();
+        return System.Text.Json.JsonSerializer.Serialize(new
         {
-            DeepL when !string.IsNullOrWhiteSpace(s.DeepLApiKey)
-                => new DeepLTranslator(s.DeepLApiKey),
-            _ => new GoogleFreeTranslator(),
-        };
+            settings.Engine, provider.ApiKey, provider.Region, provider.Model, provider.Endpoint,
+        });
     }
-
-    /// <summary>True if a settings change between <paramref name="a"/> and <paramref name="b"/> requires rebuilding the translator.</summary>
-    public static bool NeedsRebuild(TranslationSettings a, TranslationSettings b) =>
-        a.Engine != b.Engine || a.DeepLApiKey != b.DeepLApiKey;
 }
 
 public sealed record EngineOption(string Id, string Display)

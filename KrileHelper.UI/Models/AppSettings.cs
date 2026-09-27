@@ -1,11 +1,15 @@
+using Translation.Core;
+
 namespace KrileHelper.UI.Models;
 
 public sealed class AppSettings
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
     public TranslationSettings Translation { get; set; } = new();
     public WindowSettings Window { get; set; } = new();
     public HotkeySettings Hotkeys { get; set; } = new();
+    public DialogueSettings Dialogue { get; set; } = new();
+    public ReferenceSettings Reference { get; set; } = new();
 
     /// <summary>
     /// Per-chat-code overrides. Only codes the user has touched are persisted;
@@ -22,10 +26,27 @@ public sealed class HotkeySettings
 
 public sealed class TranslationSettings
 {
-    public string Engine { get; set; } = "GoogleFree";   // GoogleFree | DeepL
+    public string Engine { get; set; } = "GoogleFree";
     public string SourceLanguage { get; set; } = "auto";
     public string TargetLanguage { get; set; } = "es";
-    public string DeepLApiKey { get; set; } = "";
+    public Dictionary<string, ProviderSettings> Providers { get; set; } = new(StringComparer.Ordinal);
+    public bool TranslateNpcNames { get; set; }
+    public bool TranslatePlayerNames { get; set; }
+
+    public ProviderSettings GetProvider() =>
+        Providers.TryGetValue(Engine, out var settings) ? settings : new ProviderSettings();
+}
+
+public sealed class DialogueSettings
+{
+    public bool Enabled { get; set; } = true;
+    public bool OverlayEnabled { get; set; }
+}
+
+public sealed class ReferenceSettings
+{
+    public bool Enabled { get; set; }
+    public string GameLanguage { get; set; } = "en";
 }
 
 public sealed class WindowSettings

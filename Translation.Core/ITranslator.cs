@@ -4,6 +4,11 @@ public interface ITranslator
 {
     string Name { get; }
 
+    /// <summary>
+    /// Configuration identity used by <see cref="CachedTranslator"/>. Existing
+    /// custom translators get a stable name-based scope by default.
+    /// </summary>
+    string CacheScope => Name;
     /// <param name="sourceLang">ISO 639-1 code, or "auto" for detection.</param>
     /// <param name="targetLang">ISO 639-1 code (e.g. "es", "en", "ja").</param>
     Task<TranslationResult> TranslateAsync(string text, string sourceLang, string targetLang, CancellationToken ct = default);

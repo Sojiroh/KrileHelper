@@ -32,6 +32,7 @@ mv "${OUT}/KrileHelper.UI" "${OUT}/krile-helper"
 chmod +x "${OUT}/krile-helper"
 
 # Copy resources used by the installer.
+cp LICENSE "${OUT}/LICENSE"
 cp packaging/icon.png "${OUT}/icon.png"
 cp packaging/krile-helper.desktop.in "${OUT}/krile-helper.desktop.in"
 cp scripts/install.sh "${OUT}/install.sh"

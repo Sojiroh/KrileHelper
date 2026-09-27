@@ -7,6 +7,8 @@ using Sharlayan.Core;
 using KrileHelper.UI.Models;
 using KrileHelper.UI.Services;
 using Translation.Core;
+using Sharlayan.Core.ChatLog;
+using Sharlayan.Core.Dialogue;
 
 namespace KrileHelper.UI.ViewModels;
 
@@ -14,7 +16,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private const int MaxRetainedLines = 500;
     private const int MaxConcurrentTranslations = 4;
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(50);
     private static readonly TimeSpan ReattachInterval = TimeSpan.FromSeconds(3);
 
     private readonly MemoryClient _client = new();
@@ -29,6 +31,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly CancellationTokenSource _cts = new();
     private readonly EventHandler _settingsChangedHandler;
     private bool _disposed;
+    private readonly ChatTranslationService _chatTranslation;
+    private int _translationGeneration;
+    private string _overlayText = "";
+    private string _overlaySpeaker = "";
+    private string _overlayCode = "";
+    private readonly Dictionary<(string Code, string Speaker, string Text, int Generation), Task<ChatTranslation>> _pendingTranslations = new();
+
+    public ReferenceTranslationService ReferenceTranslations { get; } = new();
+    public GameAssets Assets { get; } = new();
+    public LiveDialogueSnapshot? CurrentDialogue { get; private set; }
+    public ChatTranslation? CurrentDialogueTranslation { get; private set; }
+    public int AttachedPid => _client.IsAttached ? _client.Process.Pid : 0;
+    public event Action? DialogueUpdated;
 
     public SettingsService Settings { get; }
     public ChatCodeRegistry Registry { get; }
@@ -36,6 +51,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _status = "Initializing…";
     [ObservableProperty] private string _processInfo = "";
     [ObservableProperty] private string? _hint;
+    [ObservableProperty] private string _dialogueStatus = "";
     [ObservableProperty] private IBrush _backgroundBrush = Brushes.Transparent;
     [ObservableProperty] private bool _topmost = true;
 
@@ -46,6 +62,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         Settings = settings;
         Registry = registry;
+        _chatTranslation = new ChatTranslationService(ReferenceTranslations);
         _translator = TranslatorFactory.Create(settings.Current.Translation);
         _lastEngineKey = EngineKey(settings.Current.Translation);
 
@@ -61,6 +78,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (_disposed) return;
             ApplyVisualSettings();
             RebuildTranslatorIfNeeded();
+            _translationGeneration++;
+            _overlayText = "";
+            CurrentDialogueTranslation = null;
+            DialogueUpdated?.Invoke();
         };
         Settings.Changed += _settingsChangedHandler;
 
@@ -68,7 +89,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         TrackTask(AttachAsync());
     }
 
-    private static string EngineKey(TranslationSettings s) => $"{s.Engine}|{s.DeepLApiKey}";
+    private static string EngineKey(TranslationSettings s) => TranslatorFactory.ConfigurationKey(s);
 
     private void RebuildTranslatorIfNeeded()
     {
@@ -110,6 +131,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 await _client.AttachAsync(_cts.Token);
                 _client.ChatLog.Poll();
+                await Task.Run(() => Assets.Load(_client.GameExecutablePath), _cts.Token);
                 ProcessInfo = $"PID {_client.Process.Pid}  base 0x{_client.Process.ModuleBase:X}";
                 Status = $"Attached. Translator: {_translator.Name} → {Settings.Current.Translation.TargetLanguage}";
                 StopReattachTimerSafe();
@@ -150,34 +172,30 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void OnPollTick(object? sender, EventArgs e)
     {
         if (_disposed) return;
-
         try
         {
-            var items = _client.ChatLog.Poll();
             int appended = 0;
-            foreach (var item in items)
+            if (Settings.Current.Dialogue.Enabled)
             {
-                var info = Registry.Lookup(item.Code);
-                if (info is null) continue;
-
-                var channelPref = Settings.GetChannel(info);
-                if (!channelPref.Show) continue;
-
-                var display = ChatLineDisplay.Create(item, info);
-                Lines.Add(display);
-                appended++;
-
-                if (channelPref.Translate && !string.IsNullOrWhiteSpace(display.Line))
-                    TrackTask(TranslateAsync(display));
-                else
-                    display.TranslationPending = false;
+                CurrentDialogue = _client.Dialogue.Poll();
+                foreach (var item in CurrentDialogue.Lines)
+                    if (Append(item)) appended++;
             }
-
+            else
+            {
+                CurrentDialogue = null;
+                CurrentDialogueTranslation = null;
+                _overlayText = "";
+            }
+            foreach (var item in _client.ChatLog.Poll())
+            {
+                if (Settings.Current.Dialogue.Enabled && _client.Dialogue.ShouldSuppressChat(item)) continue;
+                if (Append(item)) appended++;
+            }
+            UpdateDialogueTranslation();
+            DialogueUpdated?.Invoke();
             if (appended == 0) return;
-
-            while (Lines.Count > MaxRetainedLines)
-                Lines.RemoveAt(0);
-
+            while (Lines.Count > MaxRetainedLines) Lines.RemoveAt(0);
             LinesAppended?.Invoke(this, EventArgs.Empty);
         }
         catch (ProcessDetachedException)
@@ -185,44 +203,102 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             StopPollTimerSafe();
             Status = "FF14 closed — waiting for restart…";
             ProcessInfo = "";
+            CurrentDialogue = null;
+            CurrentDialogueTranslation = null;
+            DialogueUpdated?.Invoke();
             StartReattachTimerSafe();
         }
         catch (Exception ex)
         {
             Status = $"Poll error: {ex.Message}";
+            CurrentDialogue = null;
+            DialogueUpdated?.Invoke();
         }
     }
 
-    private static (string Speaker, string Body) SplitSpeaker(string line)
+    private bool Append(ChatLogItem item)
     {
-        int idx = line.IndexOf(':');
-        if (idx <= 0 || idx > 40) return ("", line);
-        return (line[..idx], line[(idx + 1)..].TrimStart());
+        var info = Registry.Lookup(item.Code);
+        if (info is null) return false;
+        var channel = Settings.GetChannel(info);
+        if (!channel.Show) return false;
+        var display = ChatLineDisplay.Create(item, info);
+        display.Assets = Assets;
+        Lines.Add(display);
+        if (channel.Translate && !string.IsNullOrWhiteSpace(display.Line))
+            TrackTask(TranslateAsync(display));
+        else
+            display.TranslationPending = false;
+        return true;
     }
+
+    private ChatTranslationContext TranslationContext(string code)
+    {
+        var translation = Settings.Current.Translation;
+        var gameLanguage = _client.GameLanguage;
+        var referenceLanguage = translation.SourceLanguage != "auto" ? translation.SourceLanguage :
+            string.IsNullOrEmpty(gameLanguage) ? Settings.Current.Reference.GameLanguage : gameLanguage;
+        return new ChatTranslationContext(translation.SourceLanguage, translation.TargetLanguage,
+            translation.TranslateNpcNames, translation.TranslatePlayerNames,
+            Settings.Current.Reference.Enabled && (ChatTranslationService.IsNpcChannel(code) || code == "0039"),
+            referenceLanguage, _client.PlayerName, _client.PlayerIsFeminine, Assets.Worlds);
+    }
+
+    private void UpdateDialogueTranslation()
+    {
+        var current = CurrentDialogue;
+        if (current is not { IsVisible: true } || !Settings.Current.Dialogue.OverlayEnabled)
+        {
+            CurrentDialogueTranslation = null;
+            _overlayText = "";
+            return;
+        }
+        var info = Registry.Lookup(current.Code);
+        if (info is null || Settings.GetChannel(info) is not { Show: true, Translate: true }) return;
+        if (_overlayText == current.Text && _overlaySpeaker == current.Speaker && _overlayCode == current.Code) return;
+        _overlayText = current.Text;
+        _overlaySpeaker = current.Speaker;
+        _overlayCode = current.Code;
+        CurrentDialogueTranslation = null;
+        if (current.Surface != DialogueSurface.Bubble && current.Text.Length > 0)
+            TrackTask(TranslateOverlayAsync(current, _translationGeneration));
+    }
+
+    private async Task TranslateOverlayAsync(LiveDialogueSnapshot snapshot, int generation)
+    {
+        try
+        {
+            var translated = await GetTranslationTask(snapshot.Text, snapshot.Code, snapshot.Speaker).ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_disposed || generation != _translationGeneration || CurrentDialogue?.Text != snapshot.Text ||
+                    CurrentDialogue.Speaker != snapshot.Speaker || CurrentDialogue.Code != snapshot.Code) return;
+                CurrentDialogueTranslation = translated;
+                DialogueUpdated?.Invoke();
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!_disposed) Status = $"Dialogue translation error: {ex.Message}";
+            });
+        }
+    }
+
 
     private async Task TranslateAsync(ChatLineDisplay display)
     {
-        bool entered = false;
         try
         {
-            await _translationSlots.WaitAsync(_cts.Token).ConfigureAwait(false);
-            entered = true;
-
-            var (speaker, body) = SplitSpeaker(display.Line);
-            var toTranslate = string.IsNullOrEmpty(body) ? display.Line : body;
-            var src = Settings.Current.Translation.SourceLanguage;
-            var tgt = Settings.Current.Translation.TargetLanguage;
-            var result = await _translator.TranslateAsync(toTranslate, src, tgt, _cts.Token).ConfigureAwait(false);
+            var result = await GetTranslationTask(display.Line, display.Code).ConfigureAwait(false);
             if (_disposed || _cts.IsCancellationRequested) return;
-
-            var combined = string.IsNullOrEmpty(speaker)
-                ? result.TranslatedText
-                : $"{speaker}: {result.TranslatedText}";
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (_disposed) return;
-                display.Translation = combined;
+                display.Translation = result.Text;
                 display.TranslationPending = false;
             });
         }
@@ -237,10 +313,33 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 display.TranslationPending = false;
             });
         }
+    }
+
+    private Task<ChatTranslation> GetTranslationTask(string text, string code, string? explicitSpeaker = null)
+    {
+        var (speaker, body) = explicitSpeaker is null
+            ? ChatTranslationService.SplitSpeaker(text, code) : (explicitSpeaker, text);
+        var key = (code, speaker, body, _translationGeneration);
+        if (_pendingTranslations.TryGetValue(key, out var existing)) return existing;
+        var task = TranslateQueuedAsync(_translator, body, code, speaker, TranslationContext(code));
+        _pendingTranslations.Add(key, task);
+        _ = task.ContinueWith(_ => Dispatcher.UIThread.Post(() => _pendingTranslations.Remove(key)),
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        return task;
+    }
+
+    private async Task<ChatTranslation> TranslateQueuedAsync(ITranslator translator, string text, string code,
+        string speaker, ChatTranslationContext context)
+    {
+        await _translationSlots.WaitAsync(_cts.Token).ConfigureAwait(false);
+        try
+        {
+            return await _chatTranslation.TranslateAsync(translator, text, code, context, _cts.Token, speaker)
+                .ConfigureAwait(false);
+        }
         finally
         {
-            if (entered)
-                _translationSlots.Release();
+            _translationSlots.Release();
         }
     }
 
@@ -337,6 +436,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void DisposeResources()
     {
         _client.Dispose();
+        ReferenceTranslations.Dispose();
+        Assets.Dispose();
         _attachGate.Dispose();
         _cts.Dispose();
         _translationSlots.Dispose();
