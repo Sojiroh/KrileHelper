@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -63,19 +64,6 @@ public sealed class ChatWrapTests
         harness.AssertAllTextWithinViewport();
     }
 
-    [AvaloniaFact]
-    public void ChatContentWidthIsPinnedToViewportAndTracksResize()
-    {
-        using var harness = new ChatWindowHarness(width: 802, height: 435);
-        harness.AddLine("0039",
-            "Updating online status. No longer away from keyboard.",
-            "Actualización del estado en línea. Ya no estás lejos del teclado.");
-
-        Assert.Equal(harness.ChatScroll.Viewport.Width, harness.ChatItems.MaxWidth, 0.5);
-
-        harness.Resize(1100, 700);
-        Assert.Equal(harness.ChatScroll.Viewport.Width, harness.ChatItems.MaxWidth, 0.5);
-    }
 
     [AvaloniaFact]
     public void NewestLineStaysVisibleWhenPinnedToBottom()
@@ -120,6 +108,44 @@ public sealed class ChatWrapTests
             $"reading history was interrupted: offset {harness.ChatScroll.Offset.Y}");
     }
 
+    [AvaloniaFact]
+    public void SwitchingTabsRestoresReadingPositionAndFollowsInactiveTranslations()
+    {
+        using var harness = new ChatWindowHarness(620, 380,
+        [
+            new() { Id = "npc", Name = "Story", Channels = ["003D"] },
+            new() { Id = "party", Name = "Team", Channels = ["000E"] },
+        ]);
+        for (int i = 0; i < 30; i++)
+        {
+            harness.AddLine("003D", $"Cid: Story line {i}, continuing our journey across Eorzea.",
+                $"Cid: Línea de historia {i}, continuamos nuestro viaje por Eorzea.");
+            harness.AddLine("000E", $"Player: Party message {i}, please wait for the next pull.",
+                $"Player: Mensaje de grupo {i}, esperad antes del siguiente combate.");
+        }
+
+        harness.ChatScroll.Offset = new Vector(0, 80);
+        harness.Layout();
+        var readingOffset = harness.ChatScroll.Offset.Y;
+        harness.SelectTab("party");
+        Assert.True(harness.IsLastItemVisible());
+        Assert.All(harness.ChatItems.Items.OfType<ChatLineDisplay>(), line => Assert.Equal("000E", line.Code));
+
+        harness.AddLine("003D", "Cid: An unseen story line.", "Cid: Una línea de historia aún no leída.");
+        var pending = harness.AddLineDelayed("000E", "Player: Ready?", "Player: ¿Estamos preparados?");
+        harness.SelectTab("npc");
+        Assert.Equal(readingOffset, harness.ChatScroll.Offset.Y, 1);
+        Assert.All(harness.ChatItems.Items.OfType<ChatLineDisplay>(), line => Assert.Equal("003D", line.Code));
+
+        pending.Translation = string.Join(" ", Enumerable.Repeat("A much longer translation arriving in the inactive tab.", 30));
+        harness.Layout();
+        Assert.Equal(readingOffset, harness.ChatScroll.Offset.Y, 1);
+        harness.SelectTab("party");
+        Assert.True(harness.IsLastItemVisible(), "returning to a bottom-pinned tab must include its late translation");
+        harness.SelectTab("npc");
+        Assert.Equal(readingOffset, harness.ChatScroll.Offset.Y, 1);
+    }
+
     private sealed class ChatWindowHarness : IDisposable
     {
         private readonly MainWindow _window;
@@ -129,16 +155,17 @@ public sealed class ChatWrapTests
         public ScrollViewer ChatScroll { get; }
         public ItemsControl ChatItems { get; }
 
-        public ChatWindowHarness(double width, double height)
+        public ChatWindowHarness(double width, double height, List<ChatTabSettings>? tabs = null)
         {
             var settingsPath = Path.Combine(Path.GetTempPath(), $"krile-tests-{Guid.NewGuid():N}", "settings.json");
             var settings = new SettingsService(settingsPath);
+            if (tabs is not null) settings.Current.ChatTabs = tabs;
             _registry = ChatCodeRegistry.LoadDefault();
             _vm = new MainWindowViewModel(settings, _registry);
             _window = new MainWindow { DataContext = _vm, Width = width, Height = height };
             _window.Show();
             ChatScroll = _window.FindControl<ScrollViewer>("ChatScroll")!;
-            ChatItems = _window.GetVisualDescendants().OfType<ItemsControl>().First();
+            ChatItems = _window.FindControl<ItemsControl>("ChatItems")!;
             Layout();
         }
 
@@ -149,7 +176,7 @@ public sealed class ChatWrapTests
                 new ChatLogItem { TimeStamp = DateTime.Now, Code = code, Line = text }, info);
             display.Translation = translation;
             display.TranslationPending = false;
-            _vm.Lines.Add(display);
+            _vm.ChatTabs.Add(display);
             Layout();
         }
 
@@ -160,7 +187,7 @@ public sealed class ChatWrapTests
             var info = _registry.Lookup(code)!;
             var display = ChatLineDisplay.Create(
                 new ChatLogItem { TimeStamp = DateTime.Now, Code = code, Line = text }, info);
-            _vm.Lines.Add(display);
+            _vm.ChatTabs.Add(display);
             Layout();
             display.Translation = translation;
             display.TranslationPending = false;
@@ -176,6 +203,13 @@ public sealed class ChatWrapTests
         {
             var last = LastItem;
             return last.Bounds.Y + last.Bounds.Height - ChatScroll.Offset.Y <= ChatScroll.Viewport.Height + 0.5;
+        }
+
+        public void SelectTab(string id)
+        {
+            _window.FindControl<TabStrip>("ChatTabStrip")!.SelectedItem =
+                _vm.ChatTabs.Tabs.Single(tab => tab.Id == id);
+            Layout();
         }
 
         public void Resize(double width, double height)

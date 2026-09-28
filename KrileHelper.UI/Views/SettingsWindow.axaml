@@ -13,6 +13,67 @@
       <ScrollViewer Name="SettingsScroll" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="16" MaxWidth="{Binding Viewport.Width, ElementName=SettingsScroll}">
 
+            <!-- Overlay tabs -->
+            <Border Background="#FF26262C" CornerRadius="6" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Overlay tabs" Foreground="#E5E5E5" FontWeight="SemiBold" FontSize="14"
+                               AutomationProperties.Name="Overlay tabs"/>
+                    <TextBlock Text="Choose which chat channels appear in each overlay tab. Tabs are independent filters, so a channel can appear in more than one tab."
+                               Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
+
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                        <ComboBox x:Name="TabSelector" Grid.Column="0" ItemsSource="{Binding TabEditor.Tabs}"
+                                  SelectedItem="{Binding TabEditor.SelectedTab}"
+                                  HorizontalAlignment="Stretch" AutomationProperties.Name="Overlay tab selection">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="vm:ChatTabEditorTabViewModel">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button x:Name="AddTabButton" Grid.Column="1" Content="Add" Command="{Binding TabEditor.AddTabCommand}"
+                                AutomationProperties.Name="Add overlay tab"/>
+                        <Button x:Name="DeleteTabButton" Grid.Column="2" Content="Delete" Command="{Binding TabEditor.DeleteTabCommand}"
+                                IsEnabled="{Binding TabEditor.CanDeleteTab}"
+                                AutomationProperties.Name="Delete overlay tab"/>
+                    </Grid>
+
+                    <TextBox x:Name="TabName" Text="{Binding TabEditor.SelectedTab.Name, UpdateSourceTrigger=PropertyChanged}"
+                             Watermark="Tab name" AutomationProperties.Name="Overlay tab name"/>
+                    <CheckBox x:Name="IncludeAllChannels" Content="Include all channels (including future channels)"
+                              IsChecked="{Binding TabEditor.SelectedTab.IncludeAllChannels}"
+                              Foreground="#CCC" AutomationProperties.Name="Include all overlay channels"/>
+                    <TextBlock Text="When this is off, choose a custom set below. An empty custom filter is allowed and shows no chat lines."
+                               Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
+                    <TextBlock Text="No channels are selected, so this custom tab will stay empty."
+                               IsVisible="{Binding TabEditor.HasEmptyFilter}"
+                               Foreground="#D0A84B" FontSize="11" TextWrapping="Wrap"/>
+
+                    <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="TabChannels" ItemsSource="{Binding TabEditor.Channels}"
+                                      IsEnabled="{Binding TabEditor.SelectedTab.IsCustomFilter}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:ChatTabEditorChannelViewModel">
+                                <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,2">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
+                                              AutomationProperties.Name="{Binding Name}"/>
+                                    <Ellipse Grid.Column="1" Width="10" Height="10" Fill="{Binding Color}"
+                                             HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0">
+                                        <TextBlock Text="{Binding Name}" Foreground="#DDD"/>
+                                        <TextBlock Text="{Binding Code}" Foreground="#666" FontFamily="monospace" FontSize="10"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </ScrollViewer>
+
+                    <TextBlock Text="This changes only tab visibility. Global Show and Translate below still control privacy and translation for every tab."
+                               Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
             <!-- Translation -->
             <Border Background="#FF26262C" CornerRadius="6" Padding="12">
                 <StackPanel Spacing="8">

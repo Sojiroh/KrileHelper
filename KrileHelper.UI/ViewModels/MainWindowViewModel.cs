@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -14,7 +13,6 @@ namespace KrileHelper.UI.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
-    private const int MaxRetainedLines = 500;
     private const int MaxConcurrentTranslations = 4;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(50);
     private static readonly TimeSpan ReattachInterval = TimeSpan.FromSeconds(3);
@@ -22,6 +20,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly MemoryClient _client = new();
     private ITranslator _translator;
     private string _lastEngineKey = "";
+    private string _lastTranslationStateKey = "";
     private readonly SemaphoreSlim _attachGate = new(1, 1);
     private readonly SemaphoreSlim _translationSlots = new(MaxConcurrentTranslations, MaxConcurrentTranslations);
     private readonly object _activeTasksGate = new();
@@ -47,6 +46,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public SettingsService Settings { get; }
     public ChatCodeRegistry Registry { get; }
+    public ChatTabsViewModel ChatTabs { get; }
 
     [ObservableProperty] private string _status = "Initializing…";
     [ObservableProperty] private string _processInfo = "";
@@ -55,17 +55,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IBrush _backgroundBrush = Brushes.Transparent;
     [ObservableProperty] private bool _topmost = true;
 
-    public ObservableCollection<ChatLineDisplay> Lines { get; } = new();
-    public event EventHandler? LinesAppended;
 
     public MainWindowViewModel(SettingsService settings, ChatCodeRegistry registry)
     {
         Settings = settings;
         Registry = registry;
+        ChatTabs = new ChatTabsViewModel(settings);
         _chatTranslation = new ChatTranslationService(ReferenceTranslations);
         _translator = TranslatorFactory.Create(settings.Current.Translation);
         _lastEngineKey = EngineKey(settings.Current.Translation);
-
+        _lastTranslationStateKey = TranslationStateKey(settings);
         _pollTimer = new DispatcherTimer { Interval = PollInterval };
         _pollTimer.Tick += OnPollTick;
 
@@ -78,6 +77,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (_disposed) return;
             ApplyVisualSettings();
             RebuildTranslatorIfNeeded();
+            var translationStateKey = TranslationStateKey(Settings);
+            if (translationStateKey == _lastTranslationStateKey) return;
+            _lastTranslationStateKey = translationStateKey;
             _translationGeneration++;
             _overlayText = "";
             CurrentDialogueTranslation = null;
@@ -90,6 +92,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     private static string EngineKey(TranslationSettings s) => TranslatorFactory.ConfigurationKey(s);
+    private static string TranslationStateKey(SettingsService settings) =>
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            settings.Current.Translation,
+            settings.Current.Reference,
+            settings.Current.Dialogue,
+            settings.Current.Channels,
+        });
 
     private void RebuildTranslatorIfNeeded()
     {
@@ -174,12 +184,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         try
         {
-            int appended = 0;
             if (Settings.Current.Dialogue.Enabled)
             {
                 CurrentDialogue = _client.Dialogue.Poll();
                 foreach (var item in CurrentDialogue.Lines)
-                    if (Append(item)) appended++;
+                    Append(item);
             }
             else
             {
@@ -190,13 +199,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             foreach (var item in _client.ChatLog.Poll())
             {
                 if (Settings.Current.Dialogue.Enabled && _client.Dialogue.ShouldSuppressChat(item)) continue;
-                if (Append(item)) appended++;
+                Append(item);
             }
             UpdateDialogueTranslation();
             DialogueUpdated?.Invoke();
-            if (appended == 0) return;
-            while (Lines.Count > MaxRetainedLines) Lines.RemoveAt(0);
-            LinesAppended?.Invoke(this, EventArgs.Empty);
         }
         catch (ProcessDetachedException)
         {
@@ -216,20 +222,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool Append(ChatLogItem item)
+    private void Append(ChatLogItem item)
     {
         var info = Registry.Lookup(item.Code);
-        if (info is null) return false;
+        if (info is null) return;
         var channel = Settings.GetChannel(info);
-        if (!channel.Show) return false;
+        if (!channel.Show) return;
         var display = ChatLineDisplay.Create(item, info);
         display.Assets = Assets;
-        Lines.Add(display);
+        ChatTabs.Add(display);
         if (channel.Translate && !string.IsNullOrWhiteSpace(display.Line))
             TrackTask(TranslateAsync(display));
         else
             display.TranslationPending = false;
-        return true;
     }
 
     private ChatTranslationContext TranslationContext(string code)
@@ -465,6 +470,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        ChatTabs.Dispose();
         Settings.Changed -= _settingsChangedHandler;
         _cts.Cancel();
 

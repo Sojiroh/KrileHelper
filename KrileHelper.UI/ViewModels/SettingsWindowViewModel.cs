@@ -20,7 +20,7 @@ public partial class SettingsWindowViewModel : ObservableObject, IDisposable
         .Where(language => language.Code is "en" or "de" or "fr" or "ja").ToArray();
     public IReadOnlyList<EngineOption> EngineOptions => TranslatorFactory.Available;
     public ObservableCollection<ChannelSettingViewModel> Channels { get; } = new();
-
+    public ChatTabEditorViewModel TabEditor { get; }
     [ObservableProperty] private EngineOption _selectedEngine;
     [ObservableProperty] private LanguageOption _selectedSource;
     [ObservableProperty] private LanguageOption _selectedTarget;
@@ -62,12 +62,14 @@ public partial class SettingsWindowViewModel : ObservableObject, IDisposable
         _liveDialogueEnabled = settings.Current.Dialogue.Enabled;
         _dialogueOverlayEnabled = settings.Current.Dialogue.OverlayEnabled;
         _referenceEnabled = settings.Current.Reference.Enabled;
+        TabEditor = new ChatTabEditorViewModel(settings, registry);
         LoadProvider();
         RefreshReferenceStatus();
         _suppressPersist = false;
         foreach (var info in registry.ByCode.Values.OrderBy(c => c.Code))
             Channels.Add(new ChannelSettingViewModel(info, settings));
     }
+ 
 
     private void LoadProvider()
     {

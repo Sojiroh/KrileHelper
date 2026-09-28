@@ -10,12 +10,22 @@ public sealed class AppSettings
     public HotkeySettings Hotkeys { get; set; } = new();
     public DialogueSettings Dialogue { get; set; } = new();
     public ReferenceSettings Reference { get; set; } = new();
+    public List<ChatTabSettings> ChatTabs { get; set; } = [new() { Id = "all", Name = "All", IncludeAllChannels = true }];
+    public string SelectedChatTabId { get; set; } = "all";
 
     /// <summary>
     /// Per-chat-code overrides. Only codes the user has touched are persisted;
     /// missing entries fall back to each channel's bundled defaults.
     /// </summary>
     public Dictionary<string, ChannelSetting> Channels { get; set; } = new();
+}
+
+public sealed class ChatTabSettings
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Name { get; set; } = "New tab";
+    public bool IncludeAllChannels { get; set; }
+    public List<string> Channels { get; set; } = new();
 }
 
 public sealed class HotkeySettings

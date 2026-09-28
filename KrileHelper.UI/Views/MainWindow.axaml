@@ -19,7 +19,7 @@
         CanResize="True">
 
     <Border Background="{Binding BackgroundBrush}" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="8" Padding="0">
-        <Grid RowDefinitions="Auto,*,Auto">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
 
             <Border Grid.Row="0"
                     Background="#FF26262C"
@@ -39,18 +39,43 @@
                 </Grid>
             </Border>
 
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled" Background="#FF1F1F25">
+                <TabStrip Name="ChatTabStrip" ItemsSource="{Binding ChatTabs.Tabs}"
+                          SelectedItem="{Binding ChatTabs.SelectedTab, Mode=TwoWay}"
+                          AutomationProperties.Name="Chat tabs">
+                    <TabStrip.Styles>
+                        <Style Selector="TabStripItem">
+                            <Setter Property="Padding" Value="12,8"/>
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Foreground" Value="#AAA"/>
+                        </Style>
+                        <Style Selector="TabStripItem:selected">
+                            <Setter Property="Foreground" Value="#FFE6B450"/>
+                        </Style>
+                    </TabStrip.Styles>
+                    <TabStrip.ItemTemplate>
+                        <DataTemplate DataType="vm:ChatTabViewModel">
+                            <TextBlock Text="{Binding Name}" MaxWidth="160"
+                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                        </DataTemplate>
+                    </TabStrip.ItemTemplate>
+                </TabStrip>
+            </ScrollViewer>
+
             <!-- Padding lives on this Border, NOT the ScrollViewer: with padding on the
                  ScrollViewer, Avalonia's ScrollContentPresenter arranges the content 2×padding
                  shorter than its measured height, so the scroll extent falls short and the
                  last lines become unreachable (avalonia#12182 class of bug). -->
-            <Border Grid.Row="1" Padding="8">
+            <Border Grid.Row="2" Padding="8">
+              <Grid>
                 <ScrollViewer Name="ChatScroll" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <!-- MaxWidth pins content to the viewport: if a layout pass ever hands an
                          item a slot wider than the window (observed on Linux: last translation
                          rendered unwrapped and clipped at the window edge), the clamp forces
                          re-wrap instead of clipping. -->
-                    <ItemsControl ItemsSource="{Binding Lines}"
+                    <ItemsControl Name="ChatItems" ItemsSource="{Binding ChatTabs.SelectedTab.Lines}"
                                   MaxWidth="{Binding Viewport.Width, ElementName=ChatScroll}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="m:ChatLineDisplay">
@@ -79,9 +104,18 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+                <StackPanel IsVisible="{Binding ChatTabs.SelectedTab.IsEmpty}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            MaxWidth="320" Margin="16" Spacing="8" IsHitTestVisible="False">
+                    <TextBlock Text="No messages in this tab yet." Foreground="#CCC"
+                               TextAlignment="Center" TextWrapping="Wrap"/>
+                    <TextBlock Text="Choose this tab's channels in Settings → Overlay tabs. Channel Show / Translate settings still apply."
+                               Foreground="#888" FontSize="12" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
             </Border>
 
-            <Border Grid.Row="2" Background="#FF1F1F25" Padding="12,4,4,4" CornerRadius="0,0,8,8">
+            <Border Grid.Row="3" Background="#FF1F1F25" Padding="12,4,4,4" CornerRadius="0,0,8,8">
                 <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0" Spacing="2">
                         <TextBlock Text="{Binding Status}" Foreground="#999" FontSize="11"/>

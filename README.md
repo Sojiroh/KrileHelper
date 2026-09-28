@@ -1,6 +1,6 @@
 # Krile Helper — Linux
 
-Current Linux release: **1.1.0**.
+Current Linux release: **1.2.0**.
 
 Native Linux port of [Tataru Helper](https://github.com/NightlyRevenger/TataruHelper),
 renamed to **Krile Helper** for the Linux fork. A real-time chat translation
@@ -115,6 +115,41 @@ Compositor stacking and fullscreen policies vary. Use **Borderless Windowed**
 if a compositor keeps FFXIV above the overlay. Native Wayland-only game windows
 cannot currently be tracked or positioned over; chat translation remains usable.
 This is not a layer-shell or universal Wayland overlay.
+
+## Configurable chat tabs
+
+Open **Settings → Overlay tabs** to create your own channel groups:
+
+1. Click **Add**, enter a tab name, and select the channels it should contain.
+2. Enable **Include all channels** for an unfiltered tab, including channels added
+   in future releases. Turning it off restores that tab's custom selection.
+3. Use the tab selector to edit or delete an existing tab. At least one tab must
+   remain; the initial **All** tab can be renamed or deleted once another exists.
+
+For example:
+
+| Tab name | Channels to select |
+|---|---|
+| NPC | `NPCD`, `NPCA`, `BossQuotes` |
+| Party | `Party` |
+| Free Company | `FreeCompany` |
+| Social | `Party`, `FreeCompany`, or any other combination |
+
+Channels may appear in multiple tabs without duplicate translation requests.
+Switch tabs along the top of the chat overlay; the strip scrolls horizontally
+when necessary. Each tab remembers its scroll position during the session.
+Inactive tabs continue receiving messages and completed translations.
+
+Names, channel selections, and the active tab save automatically. Filter changes
+apply immediately to the shared **500-message in-memory history**; messages age
+out across all tabs, and history/scroll positions are not saved across restarts.
+Existing configurations start with **All**, preserving the previous chat view.
+
+Tab membership only controls where messages appear. Global **Channels → Show**
+still hides a channel everywhere, and **Translate** controls whether it is sent
+to the translation engine. Party and Free Company translation remain off by
+default until explicitly enabled. The game-aligned NPC dialogue overlay is
+independent of these chat tabs.
 
 ## Translation backends
 
