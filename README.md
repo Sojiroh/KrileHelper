@@ -18,6 +18,63 @@ Credit for the original implementation, signatures, chat decoding, and artwork
 belongs to upstream and its contributors, including NightlyRevenger, progneo,
 and xDarkOne. Their MIT copyright notices are preserved in [LICENSE](LICENSE).
 
+## See it in action
+
+**Live dialogue translation, game-aligned overlays, and your own chat tabs.**
+Keep the original text alongside its translation, follow the story without
+waiting for the chat log, and separate NPC dialogue from party or Free Company
+messages.
+
+These screenshots show the actual Linux UI with illustrative English → Spanish
+dialogue and fictional player names, not a connected FFXIV session or live
+translation-service output. No game assets or private chat are included.
+
+### Live translation
+
+Original messages stay visible, with translations highlighted underneath.
+Live reading picks up dialogue, cutscene subtitles, speech bubbles, and choices
+without waiting for them to reach the chat log.
+
+![Krile Helper showing original English NPC dialogue with Spanish translations in gold, alongside untranslated Party and Free Company sample messages](docs/screenshots/live-translation.png)
+
+Party and Free Company messages are shown untranslated here: translating social
+channels is an explicit opt-in, independent of which tab you are viewing.
+
+### Translations over dialogue boxes
+
+Prefer to keep your eyes on the scene? Enable **Settings → Live dialogue →
+Place translations over the game's dialogue boxes** for click-through
+translations positioned at the game's dialogue, subtitle, and choice bounds.
+
+![Standalone Krile dialogue overlay showing a Spanish sample translation in a parchment-colored dialogue panel](docs/screenshots/aligned-dialogue.png)
+
+*The aligned dialogue window shown on its own, without a game background.*
+Requires an accessible X11/XWayland game window; speech bubbles stay in the chat
+overlay. See [live dialogue and aligned overlays](#live-dialogue-and-aligned-overlays)
+for behavior and desktop limitations.
+
+### Chat tabs that fit how you play
+
+Create **NPC**, **Party**, **Free Company**, or your own channel combinations in
+**Settings → Overlay tabs**. Switching from **All** to **NPC** filters the same
+history without losing translations or retranslating shared messages.
+
+![The NPC tab selected in Krile Helper, showing only the translated NPC dialogue from the All tab above](docs/screenshots/chat-tabs.png)
+
+<details>
+<summary>See the tab editor</summary>
+
+Choose a name and channels for each tab, or turn on **Include all channels**.
+This example keeps only Party messages in the Party tab.
+
+![Overlay tabs settings with a custom Party tab, Include all channels disabled, and the Party channel selected](docs/screenshots/overlay-tabs-settings.png)
+
+</details>
+
+Tabs remember their scroll positions during the session; names, filters, and
+the active tab save automatically. See [configurable chat tabs](#configurable-chat-tabs)
+for setup and channel-privacy controls.
+
 ## Architecture
 
 | Project | Target | Purpose |
